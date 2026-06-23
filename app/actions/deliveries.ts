@@ -4,21 +4,19 @@ import { db } from "@/lib/db"
 import { deliveries } from "@/lib/db/schema"
 import { and, desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { getProfile } from "@/lib/session"
-
-async function requireProfile() {
-  const profile = await getProfile()
-  if (!profile) throw new Error("Não autenticado")
-  return profile
-}
+import { requireUser } from "@/app/actions/auth"
 
 export async function getDeliveries() {
-  const profile = await requireProfile()
-  return db.select().from(deliveries).where(eq(deliveries.profile, profile)).orderBy(desc(deliveries.createdAt))
+  const user = await requireUser()
+  return db
+    .select()
+    .from(deliveries)
+    .where(eq(deliveries.userId, user.id))
+    .orderBy(desc(deliveries.createdAt))
 }
 
 export async function createDelivery(formData: FormData) {
-  const profile = await requireProfile()
+  const user = await requireUser()
   const trackingCode = formData.get("trackingCode")?.toString().trim() || ""
   const recipient = formData.get("recipient")?.toString().trim() || ""
   const address = formData.get("address")?.toString().trim() || null
@@ -32,7 +30,7 @@ export async function createDelivery(formData: FormData) {
   }
 
   await db.insert(deliveries).values({
-    profile,
+    userId: user.id,
     trackingCode,
     recipient,
     address,
@@ -45,16 +43,17 @@ export async function createDelivery(formData: FormData) {
 }
 
 export async function updateDeliveryStatus(id: number, status: string) {
-  const profile = await requireProfile()
+  const user = await requireUser()
   await db
     .update(deliveries)
     .set({ status })
-    .where(and(eq(deliveries.id, id), eq(deliveries.profile, profile)))
+    .where(and(eq(deliveries.id, id), eq(deliveries.userId, user.id)))
   revalidatePath("/dashboard")
 }
 
 export async function deleteDelivery(id: number) {
-  const profile = await requireProfile()
-  await db.delete(deliveries).where(and(eq(deliveries.id, id), eq(deliveries.profile, profile)))
+  const user = await requireUser()
+  await db.delete(deliveries).where(and(eq(deliveries.id, id), eq(deliveries.userId, user.id)))
   revalidatePath("/dashboard")
 }
+

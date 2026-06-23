@@ -1,27 +1,20 @@
 import { cookies } from "next/headers"
 
-export const PROFILES = {
-  claudio: { id: "claudio", name: "Cláudio 2026" },
-  roberto: { id: "roberto", name: "Roberto 2026" },
-} as const
+const COOKIE_NAME = "jadlog_user"
 
-export type ProfileId = keyof typeof PROFILES
+export type SessionUser = { id: number; email: string; name?: string };
 
-const COOKIE_NAME = "jadlog_profile"
-
-export function isValidProfile(value: string | undefined | null): value is ProfileId {
-  return value === "claudio" || value === "roberto"
-}
-
-export async function getProfile(): Promise<ProfileId | null> {
+export async function getUserId(): Promise<number | null> {
   const store = await cookies()
   const value = store.get(COOKIE_NAME)?.value
-  return isValidProfile(value) ? value : null
+  if (!value) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
 }
 
-export async function setProfile(profile: ProfileId) {
+export async function setUserId(userId: number) {
   const store = await cookies()
-  store.set(COOKIE_NAME, profile, {
+  store.set(COOKIE_NAME, String(userId), {
     httpOnly: true,
     sameSite: "none",
     secure: true,
@@ -30,7 +23,8 @@ export async function setProfile(profile: ProfileId) {
   })
 }
 
-export async function clearProfile() {
+export async function clearUserId() {
   const store = await cookies()
   store.delete(COOKIE_NAME)
 }
+

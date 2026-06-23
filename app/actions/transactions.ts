@@ -4,21 +4,19 @@ import { db } from "@/lib/db"
 import { transactions } from "@/lib/db/schema"
 import { and, desc, eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
-import { getProfile } from "@/lib/session"
-
-async function requireProfile() {
-  const profile = await getProfile()
-  if (!profile) throw new Error("Não autenticado")
-  return profile
-}
+import { requireUser } from "@/app/actions/auth"
 
 export async function getTransactions() {
-  const profile = await requireProfile()
-  return db.select().from(transactions).where(eq(transactions.profile, profile)).orderBy(desc(transactions.date))
+  const user = await requireUser()
+  return db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.userId, user.id))
+    .orderBy(desc(transactions.date))
 }
 
 export async function createTransaction(formData: FormData) {
-  const profile = await requireProfile()
+  const user = await requireUser()
   const type = formData.get("type")?.toString() || "receita"
   const description = formData.get("description")?.toString().trim() || ""
   const category = formData.get("category")?.toString().trim() || null
@@ -30,7 +28,7 @@ export async function createTransaction(formData: FormData) {
   }
 
   await db.insert(transactions).values({
-    profile,
+    userId: user.id,
     type,
     description,
     category,
@@ -41,7 +39,8 @@ export async function createTransaction(formData: FormData) {
 }
 
 export async function deleteTransaction(id: number) {
-  const profile = await requireProfile()
-  await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.profile, profile)))
+  const user = await requireUser()
+  await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
   revalidatePath("/dashboard")
 }
+
