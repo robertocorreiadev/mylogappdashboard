@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation"
 import { Package } from "lucide-react"
-import { getUserId } from "@/lib/session"
-import { LoginForm } from "@/login-form"
-
+import { getSession } from "@/lib/session"
+import { LoginForm } from "@/components/login-form"
 
 export default async function LoginPage() {
-  const userId = await getUserId()
+  const userId = await getSession()
   if (userId) redirect("/dashboard")
 
   return (
@@ -13,11 +12,11 @@ export default async function LoginPage() {
       <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 shadow-2xl">
         <div className="mb-8 flex items-center justify-center gap-3 text-3xl font-bold text-primary">
           <Package className="h-8 w-8" aria-hidden="true" />
-          <span>MYLOG</span>
+          <span>JADLOG</span>
         </div>
         <h1 className="mb-6 text-center text-base text-muted-foreground">Painel de Controle</h1>
         <LoginForm />
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        <p className="mt-5 text-center text-xs text-muted-foreground">
           Não tem conta?{" "}
           <a href="/register" className="font-semibold text-primary hover:underline">
             Cadastre-se

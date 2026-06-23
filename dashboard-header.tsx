@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 
 export function DashboardHeader({ userName }: { userName: string }) {
   const year = new Date().getFullYear()
-
   return (
     <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -13,11 +12,10 @@ export function DashboardHeader({ userName }: { userName: string }) {
         </div>
         <div>
           <p className="text-lg font-bold leading-tight text-primary">JADLOG</p>
-          {/* Ano dinâmico — atualiza automaticamente */}
+          {/* Ano dinâmico — atualiza sozinho a cada virada de ano */}
           <p className="text-xs text-muted-foreground">Painel de Controle · {year}</p>
         </div>
       </div>
-
       <div className="flex items-center gap-3">
         <div className="text-right">
           <p className="text-xs text-muted-foreground">Logado como</p>

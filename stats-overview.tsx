@@ -4,68 +4,34 @@ import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 
 export function StatsOverview({
-  deliveries,
-  transactions,
-  dailyRecords,
+  deliveries, transactions, dailyRecords,
 }: {
   deliveries: Delivery[]
   transactions: Transaction[]
   dailyRecords: DailyRecord[]
 }) {
-  // Stats de boletas diárias
   const totalDelivered = dailyRecords.reduce((s, r) => s + r.delivered, 0)
   const totalGross     = dailyRecords.reduce((s, r) => s + r.delivered * Number(r.valuePerDelivery), 0)
-  const totalExpenses  = dailyRecords.reduce((s, r) => s + Number(r.expenses), 0)
-  const totalNet       = totalGross - totalExpenses
+  const totalExpDR     = dailyRecords.reduce((s, r) => s + Number(r.expenses), 0)
+  const totalNet       = totalGross - totalExpDR
   const workDays       = dailyRecords.length
   const avgNet         = workDays ? totalNet / workDays : 0
 
-  // Stats de transações financeiras
-  const receita = transactions.filter((t) => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
-  const despesa = transactions.filter((t) => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
+  const receita = transactions.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
+  const despesa = transactions.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
   const saldo   = receita - despesa
 
   const cards = [
-    {
-      label: "Entregas realizadas",
-      value: String(totalDelivered),
-      hint: `${workDays} dias trabalhados`,
-      icon: Truck,
-      color: "text-primary",
-    },
-    {
-      label: "Fat. bruto (boletas)",
-      value: formatCurrency(totalGross),
-      hint: `Despesas: ${formatCurrency(totalExpenses)}`,
-      icon: TrendingUp,
-      color: "text-[var(--chart-2)]",
-    },
-    {
-      label: "Fat. líquido (boletas)",
-      value: formatCurrency(totalNet),
-      hint: `Média diária: ${formatCurrency(avgNet)}`,
-      icon: Wallet,
-      color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive",
-    },
-    {
-      label: "Entregas (rastreio)",
-      value: String(deliveries.length),
-      hint: `${deliveries.filter((d) => d.status === "pendente" || d.status === "em_transito").length} em aberto`,
-      icon: Package,
-      color: "text-[var(--chart-4)]",
-    },
-    {
-      label: "Saldo financeiro",
-      value: formatCurrency(saldo),
-      hint: saldo >= 0 ? "Positivo" : "Negativo",
-      icon: saldo >= 0 ? TrendingUp : TrendingDown,
-      color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive",
-    },
+    { label: "Entregas (boletas)", value: String(totalDelivered), hint: `${workDays} dias trabalhados`, icon: Truck, color: "text-primary" },
+    { label: "Fat. bruto", value: formatCurrency(totalGross), hint: `Despesas: ${formatCurrency(totalExpDR)}`, icon: TrendingUp, color: "text-[var(--chart-2)]" },
+    { label: "Fat. líquido", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
+    { label: "Rastreio (total)", value: String(deliveries.length), hint: `${deliveries.filter(d => d.status === "pendente" || d.status === "em_transito").length} em aberto`, icon: Package, color: "text-[var(--chart-4)]" },
+    { label: "Saldo financeiro", value: formatCurrency(saldo), hint: saldo >= 0 ? "Positivo" : "Negativo", icon: saldo >= 0 ? TrendingUp : TrendingDown, color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
   ]
 
   return (
     <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {cards.map((c) => (
+      {cards.map(c => (
         <Card key={c.label}>
           <CardContent className="flex items-start justify-between gap-2 p-4">
             <div>

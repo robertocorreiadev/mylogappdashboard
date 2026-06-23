@@ -13,14 +13,12 @@ export async function getTransactions() {
 
 export async function createTransaction(formData: FormData) {
   const user        = await requireUser()
-  const type        = formData.get("type")?.toString() ?? "receita"
-  const description = formData.get("description")?.toString().trim() ?? ""
+  const type        = formData.get("type")?.toString() || "receita"
+  const description = formData.get("description")?.toString().trim() || ""
   const category    = formData.get("category")?.toString().trim() || null
-  const amount      = formData.get("amount")?.toString() ?? "0"
-  const date        = formData.get("date")?.toString() ?? new Date().toISOString().slice(0, 10)
-
-  if (!description) return { error: "Descrição é obrigatória." }
-
+  const amount      = formData.get("amount")?.toString() || "0"
+  const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
+  if (!description) throw new Error("Descrição é obrigatória")
   await db.insert(transactions).values({ userId: user.id, type, description, category, amount, date })
   revalidatePath("/dashboard")
 }

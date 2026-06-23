@@ -8,9 +8,7 @@ import { OverviewPanel } from "@/components/overview-panel"
 import { DailyRecordsPanel } from "@/components/daily-records-panel"
 
 export function DashboardTabs({
-  deliveries,
-  transactions,
-  dailyRecords,
+  deliveries, transactions, dailyRecords,
 }: {
   deliveries: Delivery[]
   transactions: Transaction[]
@@ -24,7 +22,6 @@ export function DashboardTabs({
         <TabsTrigger value="finance">Financeiro</TabsTrigger>
         <TabsTrigger value="overview">Visão Geral</TabsTrigger>
       </TabsList>
-
       <TabsContent value="daily">
         <DailyRecordsPanel records={dailyRecords} />
       </TabsContent>

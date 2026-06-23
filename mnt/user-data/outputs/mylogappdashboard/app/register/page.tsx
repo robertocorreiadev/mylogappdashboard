@@ -16,7 +16,7 @@ export default async function RegisterPage() {
         </div>
         <h1 className="mb-6 text-center text-base text-muted-foreground">Criar conta</h1>
         <RegisterForm />
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        <p className="mt-5 text-center text-xs text-muted-foreground">
           Já tem conta?{" "}
           <a href="/" className="font-semibold text-primary hover:underline">
             Fazer login
