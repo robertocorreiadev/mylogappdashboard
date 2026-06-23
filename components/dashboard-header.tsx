@@ -17,8 +17,8 @@ export function DashboardHeader({ profileName }: { profileName: string }) {
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="text-xs text-muted-foreground">Acesso</p>
-          <p className="text-sm font-semibold text-foreground">{profileName}</p>
+          <p className="text-xs text-muted-foreground">Painel</p>
+          <p className="text-sm font-semibold text-foreground">MYLOG</p>
         </div>
         <form action={logout}>
           <Button type="submit" variant="secondary" size="sm" className="gap-2">

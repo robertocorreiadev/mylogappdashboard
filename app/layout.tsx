@@ -10,8 +10,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'JADLOG · Painel de Controle',
-  description: 'Portal de gestão de entregas e financeiro JADLOG',
+  title: 'MYLOG · Painel de Controle',
+  description: 'Portal de gestão de entregas e financeiro MYLOG',
   generator: 'v0.app',
   icons: {
     icon: [

@@ -9,14 +9,14 @@ import { Label } from "@/components/ui/label"
 
 export function RegisterForm() {
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [isPending] = useTransition()
 
-  function handleSubmit(formData: FormData) {
+  async function handleSubmit(formData: FormData) {
     setError(null)
-    startTransition(async () => {
-      const result = await register(formData)
-      if (result?.error) setError(result.error)
-    })
+    // Server Action redirect() should handle navigation.
+    // If the server returns an error object, we keep the user on the page.
+    const result = await register(formData)
+    if (result?.error) setError(result.error)
   }
 
   return (
