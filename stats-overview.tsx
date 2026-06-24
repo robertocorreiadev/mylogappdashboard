@@ -1,4 +1,4 @@
-import { Package, TrendingUp, TrendingDown, Wallet, Truck } from "lucide-react"
+import { Truck, TrendingUp, TrendingDown, Wallet, Package } from "lucide-react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
@@ -22,15 +22,15 @@ export function StatsOverview({
   const saldo   = receita - despesa
 
   const cards = [
-    { label: "Entregas (boletas)", value: String(totalDelivered), hint: `${workDays} dias trabalhados`, icon: Truck, color: "text-primary" },
-    { label: "Fat. bruto", value: formatCurrency(totalGross), hint: `Despesas: ${formatCurrency(totalExpDR)}`, icon: TrendingUp, color: "text-[var(--chart-2)]" },
-    { label: "Fat. líquido", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
+    { label: "Entregas realizadas", value: String(totalDelivered), hint: `${workDays} dias trabalhados`, icon: Truck, color: "text-primary" },
+    { label: "Fat. bruto acumulado", value: formatCurrency(totalGross), hint: `Despesas: ${formatCurrency(totalExpDR)}`, icon: TrendingUp, color: "text-[var(--chart-2)]" },
+    { label: "Fat. líquido acumulado", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
     { label: "Rastreio (total)", value: String(deliveries.length), hint: `${deliveries.filter(d => d.status === "pendente" || d.status === "em_transito").length} em aberto`, icon: Package, color: "text-[var(--chart-4)]" },
     { label: "Saldo financeiro", value: formatCurrency(saldo), hint: saldo >= 0 ? "Positivo" : "Negativo", icon: saldo >= 0 ? TrendingUp : TrendingDown, color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
   ]
 
   return (
-    <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
       {cards.map(c => (
         <Card key={c.label}>
           <CardContent className="flex items-start justify-between gap-2 p-4">

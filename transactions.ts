@@ -18,8 +18,24 @@ export async function createTransaction(formData: FormData) {
   const category    = formData.get("category")?.toString().trim() || null
   const amount      = formData.get("amount")?.toString() || "0"
   const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
-  if (!description) throw new Error("Descrição é obrigatória")
+  if (!description) throw new Error("Descrição obrigatória.")
   await db.insert(transactions).values({ userId: user.id, type, description, category, amount, date })
+  revalidatePath("/dashboard")
+}
+
+export async function updateTransaction(formData: FormData) {
+  const user        = await requireUser()
+  const id          = parseInt(formData.get("id")?.toString() || "0")
+  const type        = formData.get("type")?.toString() || "receita"
+  const description = formData.get("description")?.toString().trim() || ""
+  const category    = formData.get("category")?.toString().trim() || null
+  const amount      = formData.get("amount")?.toString() || "0"
+  const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
+  if (!id || !description) throw new Error("Dados inválidos.")
+  await db
+    .update(transactions)
+    .set({ type, description, category, amount, date })
+    .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
   revalidatePath("/dashboard")
 }
 

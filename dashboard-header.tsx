@@ -12,7 +12,6 @@ export function DashboardHeader({ userName }: { userName: string }) {
         </div>
         <div>
           <p className="text-lg font-bold leading-tight text-primary">JADLOG</p>
-          {/* Ano dinâmico — atualiza sozinho a cada virada de ano */}
           <p className="text-xs text-muted-foreground">Painel de Controle · {year}</p>
         </div>
       </div>

@@ -1,10 +1,10 @@
 import { cookies } from "next/headers"
 
-const COOKIE_NAME = "jadlog_session"
+const COOKIE = "jadlog_uid"
 
 export async function getSession(): Promise<number | null> {
   const store = await cookies()
-  const val   = store.get(COOKIE_NAME)?.value
+  const val   = store.get(COOKIE)?.value
   if (!val) return null
   const id = parseInt(val, 10)
   return isNaN(id) ? null : id
@@ -12,7 +12,7 @@ export async function getSession(): Promise<number | null> {
 
 export async function setSession(userId: number) {
   const store = await cookies()
-  store.set(COOKIE_NAME, String(userId), {
+  store.set(COOKIE, String(userId), {
     httpOnly: true,
     sameSite: "lax",
     secure:   process.env.NODE_ENV === "production",
@@ -23,5 +23,5 @@ export async function setSession(userId: number) {
 
 export async function clearSession() {
   const store = await cookies()
-  store.delete(COOKIE_NAME)
+  store.delete(COOKIE)
 }

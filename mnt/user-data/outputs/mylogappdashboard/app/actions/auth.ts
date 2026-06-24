@@ -18,7 +18,7 @@ export async function register(formData: FormData) {
   if (password !== confirm)         return { error: "As senhas não coincidem." }
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
-  if (existing) return { error: "Este e-mail já está cadastrado." }
+  if (existing) return { error: "E-mail já cadastrado. Faça login." }
 
   const [user] = await db
     .insert(users)
@@ -45,18 +45,16 @@ export async function login(formData: FormData) {
 
 export async function loginWithGoogle(googleId: string, email: string, name: string, avatarUrl?: string) {
   let [user] = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1)
-
   if (!user) {
     const [byEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1)
     if (byEmail) {
       await db.update(users).set({ googleId, avatarUrl }).where(eq(users.id, byEmail.id))
       user = { ...byEmail, googleId, avatarUrl: avatarUrl ?? null }
     } else {
-      const [newUser] = await db.insert(users).values({ name, email, googleId, avatarUrl }).returning()
-      user = newUser
+      const [n] = await db.insert(users).values({ name, email, googleId, avatarUrl }).returning()
+      user = n
     }
   }
-
   await setSession(user.id)
   redirect("/dashboard")
 }

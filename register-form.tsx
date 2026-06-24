@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export function RegisterForm() {
-  const [error, setError]     = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
-  function handleSubmit(formData: FormData) {
+  function handleSubmit(fd: FormData) {
     setError(null)
     startTransition(async () => {
-      const res = await register(formData)
+      const res = await register(fd)
       if (res?.error) setError(res.error)
     })
   }
@@ -33,13 +33,11 @@ export function RegisterForm() {
         </svg>
         Cadastrar com Google
       </a>
-
       <div className="relative flex items-center">
         <div className="flex-1 border-t border-border" />
         <span className="mx-3 text-xs text-muted-foreground">ou</span>
         <div className="flex-1 border-t border-border" />
       </div>
-
       <form action={handleSubmit} className="flex flex-col gap-3">
         <div className="grid gap-1.5">
           <Label htmlFor="name">Nome completo</Label>
