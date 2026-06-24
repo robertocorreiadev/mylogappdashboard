@@ -1,26 +1,27 @@
 import { redirect } from "next/navigation"
-import { Package } from "lucide-react"
-import { getSession } from "@/lib/session"
-import { LoginForm } from "@/components/login-form"
+import { requireUser } from "@/app/actions/auth"
+import { getDeliveries } from "@/app/actions/deliveries"
+import { getTransactions } from "@/app/actions/transactions"
+import { getDailyRecords } from "@/app/actions/daily-records"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { StatsOverview } from "@/components/stats-overview"
+import { DashboardTabs } from "@/components/dashboard-tabs"
 
-export default async function LoginPage() {
-  const uid = await getSession()
-  if (uid) redirect("/dashboard")
+export default async function DashboardPage() {
+  let user
+  try { user = await requireUser() } catch { redirect("/") }
+
+  const [deliveries, transactions, dailyRecords] = await Promise.all([
+    getDeliveries(),
+    getTransactions(),
+    getDailyRecords(),
+  ])
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-5">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 shadow-2xl">
-        <div className="mb-8 flex items-center justify-center gap-3 text-3xl font-bold text-primary">
-          <Package className="h-8 w-8" />
-          <span>JADLOG</span>
-        </div>
-        <h1 className="mb-6 text-center text-base text-muted-foreground">Painel de Controle</h1>
-        <LoginForm />
-        <p className="mt-5 text-center text-xs text-muted-foreground">
-          Não tem conta?{" "}
-          <a href="/register" className="font-semibold text-primary hover:underline">Cadastre-se</a>
-        </p>
-      </div>
+    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
+      <DashboardHeader userName={user.name} />
+      <StatsOverview deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
+      <DashboardTabs deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
     </main>
   )
 }

@@ -32,8 +32,7 @@ export async function updateTransaction(formData: FormData) {
   const amount      = formData.get("amount")?.toString() || "0"
   const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
   if (!id || !description) throw new Error("Dados inválidos.")
-  await db
-    .update(transactions)
+  await db.update(transactions)
     .set({ type, description, category, amount, date })
     .where(and(eq(transactions.id, id), eq(transactions.userId, user.id)))
   revalidatePath("/dashboard")

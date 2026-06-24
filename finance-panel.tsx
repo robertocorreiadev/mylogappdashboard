@@ -18,25 +18,14 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDate } from "@/lib/format"
 
-// ── Formulário reutilizável (criar e editar) ─────────────────
-function TransactionForm({
-  initial,
-  onClose,
-}: {
-  initial?: Transaction
-  onClose: () => void
-}) {
+function TransactionForm({ initial, onClose }: { initial?: Transaction; onClose: () => void }) {
   const [isPending, startTransition] = useTransition()
   const [type, setType] = useState(initial?.type ?? "receita")
 
   function handleSubmit(fd: FormData) {
     startTransition(async () => {
-      if (initial) {
-        fd.append("id", String(initial.id))
-        await updateTransaction(fd)
-      } else {
-        await createTransaction(fd)
-      }
+      if (initial) { fd.append("id", String(initial.id)); await updateTransaction(fd) }
+      else await createTransaction(fd)
       onClose()
     })
   }
@@ -56,36 +45,25 @@ function TransactionForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="amount">Valor (R$)</Label>
-          <Input
-            id="amount" name="amount" type="number" step="0.01" min="0"
-            required placeholder="0,00"
-            defaultValue={initial ? Number(initial.amount).toFixed(2) : ""}
-          />
+          <Input id="amount" name="amount" type="number" step="0.01" min="0" required placeholder="0,00"
+            defaultValue={initial ? Number(initial.amount).toFixed(2) : ""} />
         </div>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="description">Descrição</Label>
-        <Input
-          id="description" name="description" required
-          placeholder="Ex: Frete entrega São Paulo"
-          defaultValue={initial?.description ?? ""}
-        />
+        <Input id="description" name="description" required placeholder="Ex: Combustível"
+          defaultValue={initial?.description ?? ""} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
           <Label htmlFor="category">Categoria</Label>
-          <Input
-            id="category" name="category"
-            placeholder="Frete, Combustível..."
-            defaultValue={initial?.category ?? ""}
-          />
+          <Input id="category" name="category" placeholder="Frete, Combustível..."
+            defaultValue={initial?.category ?? ""} />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="date">Data</Label>
-          <Input
-            id="date" name="date" type="date"
-            defaultValue={initial?.date ?? new Date().toISOString().slice(0, 10)}
-          />
+          <Input id="date" name="date" type="date"
+            defaultValue={initial?.date ?? new Date().toISOString().slice(0, 10)} />
         </div>
       </div>
       <DialogFooter>
@@ -97,9 +75,8 @@ function TransactionForm({
   )
 }
 
-// ── Linha com botões editar/excluir ──────────────────────────
 function TransactionRow({ transaction }: { transaction: Transaction }) {
-  const [editOpen, setEditOpen]    = useState(false)
+  const [editOpen, setEditOpen]      = useState(false)
   const [isPending, startTransition] = useTransition()
   const isReceita = transaction.type === "receita"
 
@@ -120,27 +97,18 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
         </TableCell>
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost" size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)}
-              aria-label="Editar lançamento"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={() => setEditOpen(true)} aria-label="Editar">
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost" size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              disabled={isPending}
-              onClick={() => startTransition(() => deleteTransaction(transaction.id))}
-              aria-label="Excluir lançamento"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              disabled={isPending} onClick={() => startTransition(() => deleteTransaction(transaction.id))}
+              aria-label="Excluir">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </TableCell>
       </TableRow>
-
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -154,7 +122,6 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
   )
 }
 
-// ── Painel principal ─────────────────────────────────────────
 export function FinancePanel({ transactions }: { transactions: Transaction[] }) {
   const [open, setOpen] = useState(false)
 
@@ -188,8 +155,7 @@ export function FinancePanel({ transactions }: { transactions: Transaction[] }) 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Novo lançamento
+                <Plus className="h-4 w-4" />Novo lançamento
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -204,7 +170,7 @@ export function FinancePanel({ transactions }: { transactions: Transaction[] }) 
 
         {transactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <Wallet className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <Wallet className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">Nenhum lançamento registrado</p>
             <p className="text-xs text-muted-foreground">Clique em &quot;Novo lançamento&quot; para começar.</p>
           </div>
