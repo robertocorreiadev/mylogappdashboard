@@ -25,7 +25,7 @@ function fmtBR(s: string) {
 function gross(r: DailyRecord) { return r.delivered * Number(r.valuePerDelivery) }
 function net(r: DailyRecord)   { return gross(r) - Number(r.expenses) }
 
-// ── Linha de resumo mensal/anual ─────────────────────────────
+// ── Barra de resumo mensal/anual ─────────────────────────────
 function SummaryBar({ label, records, isAnnual = false }: { label: string; records: DailyRecord[]; isAnnual?: boolean }) {
   if (!records.length) return null
   const tDel   = records.reduce((s,r) => s + r.delivered, 0)
@@ -58,19 +58,25 @@ function SummaryBar({ label, records, isAnnual = false }: { label: string; recor
   )
 }
 
-// ── Formulário de registro ───────────────────────────────────
+// ── Formulário de registro ────────────────────────────────────
 function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onClose: () => void }) {
   const today = new Date().toISOString().slice(0, 10)
   const [pending, startTransition] = useTransition()
   const [error, setError]          = useState<string | null>(null)
   const [delivered, setDelivered]  = useState(initial?.delivered ?? 0)
-  const [vpd, setVpd]              = useState(Number(initial?.valuePerDelivery ?? 3.5))
+  // FIX: usar string para permitir "2.00", "3.50", etc sem rejeição do browser
+  const [vpdStr, setVpdStr]        = useState(
+    initial?.valuePerDelivery ? Number(initial.valuePerDelivery).toFixed(2) : "3.50"
+  )
   const [expenses, setExpenses]    = useState(Number(initial?.expenses ?? 0))
+  const vpd    = parseFloat(vpdStr) || 0
   const tGross = delivered * vpd
   const tNet   = tGross - expenses
 
   function handleSubmit(fd: FormData) {
     setError(null)
+    // Garante que o valor exato da string vai para o FormData
+    fd.set("valuePerDelivery", vpdStr)
     startTransition(async () => {
       const res = await saveDailyRecord(fd)
       if (res?.error) setError(res.error)
@@ -79,51 +85,84 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
   }
 
   return (
-    <form action={handleSubmit} className="grid gap-4">
+    <form action={handleSubmit} className="grid gap-5">
       {/* Valor por entrega */}
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-3 py-2.5">
         <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <Label htmlFor="vpd" className="shrink-0 text-sm text-muted-foreground">Valor por entrega (R$)</Label>
-        <Input id="vpd" name="valuePerDelivery" type="number" step="0.10" min="0.01" required
-          className="w-24 font-mono" value={vpd} onChange={e => setVpd(Number(e.target.value))} />
+        <Label htmlFor="vpd" className="shrink-0 text-sm text-muted-foreground">
+          Valor por entrega (R$)
+        </Label>
+        {/* FIX: type="text" com inputMode numérico — aceita "2.00" sem rejeitar */}
+        <input
+          id="vpd"
+          name="valuePerDelivery"
+          inputMode="decimal"
+          pattern="[0-9]*[.,]?[0-9]*"
+          className="w-24 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          value={vpdStr}
+          onChange={e => setVpdStr(e.target.value.replace(",", "."))}
+          required
+        />
         <span className="text-xs text-muted-foreground">← altere se o valor mudar</span>
       </div>
 
-      {/* Campos em grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="grid gap-1.5">
+      {/* FIX: grid com 2 colunas em mobile, 5 em desktop — sem sobreposição */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="date" className="flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" /> Data
           </Label>
-          <Input id="date" name="date" type="date" required defaultValue={initial?.date ?? today} className="text-sm" />
+          <Input
+            id="date" name="date" type="date" required
+            defaultValue={initial?.date ?? today}
+            className="text-sm font-mono"
+          />
         </div>
-        <div className="grid gap-1.5">
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="delivered" className="flex items-center gap-1 text-xs text-muted-foreground">
             <CheckCircle2 className="h-3.5 w-3.5" /> Entregas realizadas
           </Label>
-          <Input id="delivered" name="delivered" type="number" min="0" placeholder="0"
-            className="font-mono" value={delivered} onChange={e => setDelivered(Number(e.target.value))} />
+          <Input
+            id="delivered" name="delivered" type="number" min="0" step="1" placeholder="0"
+            className="font-mono"
+            value={delivered}
+            onChange={e => setDelivered(Number(e.target.value))}
+          />
         </div>
-        <div className="grid gap-1.5">
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="scheduled" className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" /> Agendadas (sem sucesso)
           </Label>
-          <Input id="scheduled" name="scheduled" type="number" min="0" placeholder="0"
-            className="font-mono" defaultValue={initial?.scheduled ?? 0} />
+          <Input
+            id="scheduled" name="scheduled" type="number" min="0" step="1" placeholder="0"
+            className="font-mono"
+            defaultValue={initial?.scheduled ?? 0}
+          />
         </div>
-        <div className="grid gap-1.5">
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="occurrences" className="flex items-center gap-1 text-xs text-muted-foreground">
             <AlertTriangle className="h-3.5 w-3.5" /> Com ocorrência
           </Label>
-          <Input id="occurrences" name="occurrences" type="number" min="0" placeholder="0"
-            className="font-mono" defaultValue={initial?.occurrences ?? 0} />
+          <Input
+            id="occurrences" name="occurrences" type="number" min="0" step="1" placeholder="0"
+            className="font-mono"
+            defaultValue={initial?.occurrences ?? 0}
+          />
         </div>
-        <div className="grid gap-1.5">
+
+        <div className="flex flex-col gap-1.5">
           <Label htmlFor="expenses" className="flex items-center gap-1 text-xs text-muted-foreground">
             <Receipt className="h-3.5 w-3.5" /> Despesas do dia (R$)
           </Label>
-          <Input id="expenses" name="expenses" type="number" step="0.01" min="0" placeholder="0,00"
-            className="font-mono" value={expenses} onChange={e => setExpenses(Number(e.target.value))} />
+          <Input
+            id="expenses" name="expenses" type="number" step="0.01" min="0" placeholder="0,00"
+            className="font-mono"
+            value={expenses}
+            onChange={e => setExpenses(Number(e.target.value))}
+          />
         </div>
       </div>
 
@@ -146,6 +185,7 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
       </div>
 
       {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{error}</p>}
+
       <DialogFooter>
         <Button type="submit" disabled={pending} className="w-full gap-2">
           <Receipt className="h-4 w-4" />
@@ -156,7 +196,7 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
   )
 }
 
-// ── Linha da tabela ──────────────────────────────────────────
+// ── Linha da tabela ───────────────────────────────────────────
 function RecordRow({ record }: { record: DailyRecord }) {
   const [editOpen, setEditOpen]    = useState(false)
   const [pending, startTransition] = useTransition()
@@ -187,14 +227,19 @@ function RecordRow({ record }: { record: DailyRecord }) {
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
+              onClick={() => setEditOpen(true)} aria-label="Editar">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              disabled={pending} onClick={() => startTransition(() => deleteDailyRecord(record.id))} aria-label="Excluir">
+              disabled={pending}
+              onClick={() => startTransition(() => deleteDailyRecord(record.id))}
+              aria-label="Excluir">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </TableCell>
       </TableRow>
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -208,7 +253,7 @@ function RecordRow({ record }: { record: DailyRecord }) {
   )
 }
 
-// ── Painel principal ─────────────────────────────────────────
+// ── Painel principal ──────────────────────────────────────────
 export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
   const [selMonth, setSelMonth] = useState<number|null>(null)
   const [filter, setFilter]     = useState<"all"|"filled"|"pending">("all")
@@ -239,7 +284,7 @@ export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
     <Card>
       <CardContent className="p-4 md:p-6">
 
-        {/* ── Formulário fixo no topo — igual à referência ── */}
+        {/* Formulário fixo no topo */}
         <div className="mb-6 rounded-lg border border-border bg-card">
           <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
             <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -252,7 +297,7 @@ export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
           </div>
         </div>
 
-        {/* ── Histórico ── */}
+        {/* Histórico */}
         <div className="mb-3 flex items-center gap-2">
           <ClipboardList className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -311,7 +356,6 @@ export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
                       .filter(r => filter==="filled" ? r.delivered>0 : filter==="pending" ? r.delivered===0 : true)
                       .sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime())
                     if (!mr.length) return null
-
                     return (
                       <>
                         <TableRow key={`${year}-${month}-hdr`} className="border-t border-border">
