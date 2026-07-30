@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
 import { Package, Database } from "lucide-react"
 import { getUserId } from "@/lib/session"
-import { LoginForm } from "@/login-form"
-import { RegisterForm } from "@/register-form"
+import { LoginForm } from "@/components/login-form"
+import { RegisterForm } from "@/components/register-form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function LoginPage() {
