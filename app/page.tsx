@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function LoginPage() {
   const userId = await getUserId()
-  if (userId) redirect("/dashboard")
+  if (userId) redirect("/select")
 
   return (
     <main className="flex min-h-screen items-center justify-center p-5">

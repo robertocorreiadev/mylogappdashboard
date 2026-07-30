@@ -59,18 +59,20 @@ function SummaryBar({ label, records, isAnnual = false }: { label: string; recor
 }
 
 // ── Formulário de registro ────────────────────────────────────
-function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onClose: () => void }) {
+function RecordForm({ initial, onClose, panel = "jadlog" }: { initial?: Partial<DailyRecord>; onClose: () => void; panel?: string }) {
   const today = new Date().toISOString().slice(0, 10)
   const [pending, startTransition] = useTransition()
   const [error, setError]          = useState<string | null>(null)
-  const [delivered, setDelivered]  = useState(initial?.delivered ?? 0)
+  const [deliveredStr, setDeliveredStr] = useState(String(initial?.delivered ?? ""))
   // FIX: usar string para permitir "2.00", "3.50", etc sem rejeição do browser
   const [vpdStr, setVpdStr]        = useState(
     initial?.valuePerDelivery ? Number(initial.valuePerDelivery).toFixed(2) : "3.50"
   )
-  const [expenses, setExpenses]    = useState(Number(initial?.expenses ?? 0))
+  const [expensesStr, setExpensesStr] = useState(initial?.expenses ? String(Number(initial.expenses)) : "")
   const vpd    = parseFloat(vpdStr) || 0
+  const delivered = parseInt(deliveredStr) || 0
   const tGross = delivered * vpd
+  const expenses = parseFloat(expensesStr) || 0
   const tNet   = tGross - expenses
 
   function handleSubmit(fd: FormData) {
@@ -86,6 +88,7 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
 
   return (
     <form action={handleSubmit} className="grid gap-5">
+      <input type="hidden" name="panel" value={panel} />
       {/* Valor por entrega */}
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-3 py-2.5">
         <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -126,8 +129,8 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
           <Input
             id="delivered" name="delivered" type="number" min="0" step="1" placeholder="0"
             className="font-mono"
-            value={delivered}
-            onChange={e => setDelivered(Number(e.target.value))}
+            value={deliveredStr}
+            onChange={e => setDeliveredStr(e.target.value)}
           />
         </div>
 
@@ -160,8 +163,8 @@ function RecordForm({ initial, onClose }: { initial?: Partial<DailyRecord>; onCl
           <Input
             id="expenses" name="expenses" type="number" step="0.01" min="0" placeholder="0,00"
             className="font-mono"
-            value={expenses}
-            onChange={e => setExpenses(Number(e.target.value))}
+            value={expensesStr}
+            onChange={e => setExpensesStr(e.target.value)}
           />
         </div>
       </div>
@@ -246,7 +249,7 @@ function RecordRow({ record }: { record: DailyRecord }) {
             <DialogTitle>Editar boleta — {fmtBR(record.date)}</DialogTitle>
             <DialogDescription>Altere os dados do dia e salve.</DialogDescription>
           </DialogHeader>
-          <RecordForm initial={record} onClose={() => setEditOpen(false)} />
+          <RecordForm initial={record} onClose={() => setEditOpen(false)} panel={panel} />
         </DialogContent>
       </Dialog>
     </>
@@ -254,7 +257,7 @@ function RecordRow({ record }: { record: DailyRecord }) {
 }
 
 // ── Painel principal ──────────────────────────────────────────
-export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
+export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: DailyRecord[]; panel?: string }) {
   const [selMonth, setSelMonth] = useState<number|null>(null)
   const [filter, setFilter]     = useState<"all"|"filled"|"pending">("all")
 
@@ -293,7 +296,7 @@ export function DailyRecordsPanel({ records }: { records: DailyRecord[] }) {
             </span>
           </div>
           <div className="p-4">
-            <RecordForm onClose={() => {}} />
+            <RecordForm onClose={() => {}} panel={panel} />
           </div>
         </div>
 

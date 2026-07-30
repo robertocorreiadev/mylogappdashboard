@@ -8,11 +8,12 @@ import { OverviewPanel } from "@/components/overview-panel"
 import { DailyRecordsPanel } from "@/components/daily-records-panel"
 
 export function DashboardTabs({
-  deliveries, transactions, dailyRecords,
+  deliveries, transactions, dailyRecords, panel = "jadlog",
 }: {
   deliveries: Delivery[]
   transactions: Transaction[]
   dailyRecords: DailyRecord[]
+  panel?: string
 }) {
   return (
     <Tabs defaultValue="daily" className="w-full">
@@ -23,13 +24,13 @@ export function DashboardTabs({
         <TabsTrigger value="overview">Visão Geral</TabsTrigger>
       </TabsList>
       <TabsContent value="daily">
-        <DailyRecordsPanel records={dailyRecords} />
+        <DailyRecordsPanel records={dailyRecords} panel={panel} />
       </TabsContent>
       <TabsContent value="deliveries">
-        <DeliveriesPanel deliveries={deliveries} />
+        <DeliveriesPanel deliveries={deliveries} panel={panel} />
       </TabsContent>
       <TabsContent value="finance">
-        <FinancePanel transactions={transactions} />
+        <FinancePanel transactions={transactions} panel={panel} />
       </TabsContent>
       <TabsContent value="overview">
         <OverviewPanel deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />

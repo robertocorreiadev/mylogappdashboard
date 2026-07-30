@@ -35,7 +35,7 @@ const statusStyles: Record<string, string> = {
   cancelada: "bg-destructive/15 text-destructive",
 }
 
-export function DeliveriesPanel({ deliveries }: { deliveries: Delivery[] }) {
+export function DeliveriesPanel({ deliveries, panel = "jadlog" }: { deliveries: Delivery[]; panel?: string }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -66,6 +66,7 @@ export function DeliveriesPanel({ deliveries }: { deliveries: Delivery[] }) {
                 <DialogDescription>Cadastre um novo pacote para acompanhamento.</DialogDescription>
               </DialogHeader>
               <form action={handleSubmit} className="grid gap-4">
+      <input type="hidden" name="panel" value={panel} />
                 <div className="grid gap-2">
                   <Label htmlFor="trackingCode">Código de rastreio</Label>
                   <Input id="trackingCode" name="trackingCode" required placeholder="JL123456789BR" />

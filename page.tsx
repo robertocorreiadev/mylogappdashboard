@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <DashboardHeader userName={user.name} />
+      <DashboardHeader userName={user.name} userEmail={user.email} />
       <StatsOverview deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
       <DashboardTabs deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
     </main>

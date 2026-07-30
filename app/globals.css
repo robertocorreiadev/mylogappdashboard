@@ -130,3 +130,15 @@
     @apply font-sans;
   }
 }
+
+/* ── Tema Painel 2 (azul) ─────────────────────────────────── */
+[data-panel="panel2"] {
+  --primary: #4f9dff;
+  --primary-foreground: #0a1628;
+  --ring: #4f9dff;
+  --chart-1: #4f9dff;
+  --chart-2: #3dd68c;
+  --chart-3: #e5484d;
+  --chart-4: #f5a623;
+  --chart-5: #8891a4;
+}

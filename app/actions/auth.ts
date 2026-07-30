@@ -23,7 +23,7 @@ export async function login(formData: FormData) {
   if (!user?.passwordHash) return { error: "E-mail ou senha inválidos." }
   if (!verifyPassword(password, user.passwordHash)) return { error: "E-mail ou senha inválidos." }
   await setUserId(user.id)
-  redirect("/dashboard")
+  redirect("/select")
 }
 
 export async function register(formData: FormData) {
@@ -39,7 +39,7 @@ export async function register(formData: FormData) {
   if (existing) return { error: "Este e-mail já está cadastrado." }
   const [created] = await db.insert(users).values({ name, email, passwordHash: hashPassword(password) }).returning()
   await setUserId(created.id)
-  redirect("/dashboard")
+  redirect("/select")
 }
 
 export async function loginWithGoogle(googleId: string, email: string, name?: string | null, picture?: string | null) {
@@ -54,13 +54,13 @@ export async function loginWithGoogle(googleId: string, email: string, name?: st
       avatarUrl: existing.avatarUrl ?? (picture ?? undefined),
     }).where(eq(users.id, existing.id))
     await setUserId(existing.id)
-    redirect("/dashboard")
+    redirect("/select")
   }
   const [created] = await db.insert(users).values({
     name: name ?? email.split("@")[0], email: normalizedEmail, googleId, avatarUrl: picture ?? undefined,
   }).returning()
   await setUserId(created.id)
-  redirect("/dashboard")
+  redirect("/select")
 }
 
 export async function logout() {

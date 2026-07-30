@@ -18,7 +18,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDate } from "@/lib/format"
 
-function TransactionForm({ initial, onClose }: { initial?: Transaction; onClose: () => void }) {
+function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Transaction; onClose: () => void; panel?: string }) {
   const [isPending, startTransition] = useTransition()
   const [type, setType] = useState(initial?.type ?? "receita")
 
@@ -32,6 +32,7 @@ function TransactionForm({ initial, onClose }: { initial?: Transaction; onClose:
 
   return (
     <form action={handleSubmit} className="grid gap-4">
+      <input type="hidden" name="panel" value={panel} />
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
           <Label htmlFor="type">Tipo</Label>
@@ -115,14 +116,14 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
             <DialogTitle>Editar lançamento</DialogTitle>
             <DialogDescription>Altere os dados e salve.</DialogDescription>
           </DialogHeader>
-          <TransactionForm initial={transaction} onClose={() => setEditOpen(false)} />
+          <TransactionForm initial={transaction} onClose={() => setEditOpen(false)} panel={panel} />
         </DialogContent>
       </Dialog>
     </>
   )
 }
 
-export function FinancePanel({ transactions }: { transactions: Transaction[] }) {
+export function FinancePanel({ transactions, panel = "jadlog" }: { transactions: Transaction[]; panel?: string }) {
   const [open, setOpen] = useState(false)
 
   const receita = transactions.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
@@ -163,7 +164,7 @@ export function FinancePanel({ transactions }: { transactions: Transaction[] }) 
                 <DialogTitle>Novo lançamento</DialogTitle>
                 <DialogDescription>Registre uma receita ou despesa.</DialogDescription>
               </DialogHeader>
-              <TransactionForm onClose={() => setOpen(false)} />
+              <TransactionForm onClose={() => setOpen(false)} panel={panel} />
             </DialogContent>
           </Dialog>
         </div>

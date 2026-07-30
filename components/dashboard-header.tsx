@@ -89,7 +89,7 @@ function PasswordForm() {
 }
 
 // ── Header principal ──────────────────────────────────────────
-export function DashboardHeader({ userName, userEmail }: { userName: string; userEmail: string }) {
+export function DashboardHeader({ userName, userEmail, panelName, panel }: { userName: string; userEmail: string; panelName?: string; panel?: string }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const year = new Date().getFullYear()
 
@@ -102,7 +102,7 @@ export function DashboardHeader({ userName, userEmail }: { userName: string; use
             <Package className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-lg font-bold leading-tight text-primary">JADLOG</p>
+            <p className="text-lg font-bold leading-tight text-primary">{panelName ?? "JADLOG"}</p>
             <p className="text-xs text-muted-foreground">Painel de Controle · {year}</p>
           </div>
         </div>
@@ -123,6 +123,13 @@ export function DashboardHeader({ userName, userEmail }: { userName: string; use
           >
             <Settings className="h-4 w-4" />
           </Button>
+
+          {/* Botão Trocar painel */}
+          <a href="/select">
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              ⇄ Trocar painel
+            </Button>
+          </a>
 
           {/* Botão Sair */}
           <form action={logout}>
