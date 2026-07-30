@@ -15,13 +15,15 @@ export async function getDailyRecords(panel: string = "jadlog") {
 
 export async function saveDailyRecord(formData: FormData) {
   const user             = await requireUser()
-  const panel            = formData.get("panel")?.toString() ?? "jadlog"
-  const date             = formData.get("date")?.toString() ?? ""
-  const valuePerDelivery = formData.get("valuePerDelivery")?.toString() ?? "3.50"
-  const delivered        = parseInt(formData.get("delivered")?.toString() ?? "0") || 0
-  const scheduled        = parseInt(formData.get("scheduled")?.toString() ?? "0") || 0
-  const occurrences      = parseInt(formData.get("occurrences")?.toString() ?? "0") || 0
-  const expenses         = formData.get("expenses")?.toString() ?? "0"
+  const panel            = formData.get("panel")?.toString() || "jadlog"
+  const date             = formData.get("date")?.toString() || ""
+  const valuePerDelivery = formData.get("valuePerDelivery")?.toString() || "3.50"
+  const delivered        = parseInt(formData.get("delivered")?.toString() || "0") || 0
+  const scheduled        = parseInt(formData.get("scheduled")?.toString() || "0") || 0
+  const occurrences      = parseInt(formData.get("occurrences")?.toString() || "0") || 0
+  // FIX: string vazia vira "0" para o banco não rejeitar o campo numeric
+  const expensesRaw      = formData.get("expenses")?.toString() || ""
+  const expenses         = expensesRaw.trim() === "" ? "0" : expensesRaw
 
   if (!date) return { error: "Selecione uma data." }
 

@@ -19,7 +19,8 @@ export async function createTransaction(formData: FormData) {
   const type        = formData.get("type")?.toString() || "receita"
   const description = formData.get("description")?.toString().trim() || ""
   const category    = formData.get("category")?.toString().trim() || null
-  const amount      = formData.get("amount")?.toString() || "0"
+  const amountRaw   = formData.get("amount")?.toString() || ""
+  const amount      = amountRaw.trim() === "" ? "0" : amountRaw
   const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
   if (!description) throw new Error("Descrição obrigatória.")
   await db.insert(transactions).values({ userId: user.id, panel, type, description, category, amount, date })
