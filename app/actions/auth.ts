@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
-import { verifyPassword, hashPassword } from "@/auth"
+import { verifyPassword, hashPassword } from "@/lib/auth"
 import { clearUserId, getUserId, setUserId } from "@/lib/session"
 
 export async function requireUser() {
