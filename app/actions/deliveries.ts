@@ -21,7 +21,8 @@ export async function createDelivery(formData: FormData) {
   const address      = formData.get("address")?.toString().trim() || null
   const city         = formData.get("city")?.toString().trim() || null
   const status       = formData.get("status")?.toString() || "pendente"
-  const value        = formData.get("value")?.toString() || "0"
+  const valueRaw     = formData.get("value")?.toString() || ""
+  const value        = valueRaw.trim() === "" ? "0" : valueRaw
   const deadline     = formData.get("deadline")?.toString() || null
   if (!trackingCode || !recipient) throw new Error("Campos obrigatórios ausentes.")
   await db.insert(deliveries).values({ userId: user.id, panel, trackingCode, recipient, address, city, status, value, deadline: deadline || null })

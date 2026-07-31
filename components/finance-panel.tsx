@@ -76,7 +76,7 @@ function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Tra
   )
 }
 
-function TransactionRow({ transaction }: { transaction: Transaction }) {
+function TransactionRow({ transaction, panel = "jadlog" }: { transaction: Transaction; panel?: string }) {
   const [editOpen, setEditOpen]      = useState(false)
   const [isPending, startTransition] = useTransition()
   const isReceita = transaction.type === "receita"
@@ -189,7 +189,7 @@ export function FinancePanel({ transactions, panel = "jadlog" }: { transactions:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map(t => <TransactionRow key={t.id} transaction={t} />)}
+                {transactions.map(t => <TransactionRow key={t.id} transaction={t} panel={panel} />)}
               </TableBody>
             </Table>
           </div>

@@ -200,7 +200,7 @@ function RecordForm({ initial, onClose, panel = "jadlog" }: { initial?: Partial<
 }
 
 // ── Linha da tabela ───────────────────────────────────────────
-function RecordRow({ record }: { record: DailyRecord }) {
+function RecordRow({ record, panel = "jadlog" }: { record: DailyRecord; panel?: string }) {
   const [editOpen, setEditOpen]    = useState(false)
   const [pending, startTransition] = useTransition()
   const g = gross(record)
@@ -366,7 +366,7 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
                             {MONTHS[month]} {year}
                           </TableCell>
                         </TableRow>
-                        {mr.map(r => <RecordRow key={r.id} record={r} />)}
+                        {mr.map(r => <RecordRow key={r.id} record={r} panel={panel} />)}
                         <SummaryBar key={`${year}-${month}-s`} label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
                       </>
                     )
