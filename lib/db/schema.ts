@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, date, timestamp, integer } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, numeric, date, timestamp, integer, unique } from "drizzle-orm/pg-core"
 
 export const users = pgTable("users", {
   id:           serial("id").primaryKey(),
@@ -23,7 +23,9 @@ export const dailyRecords = pgTable("daily_records", {
   expenses:         numeric("expenses", { precision: 10, scale: 2 }).notNull().default("0"),
   updatedAt:        timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt:        timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-})
+}, (t) => [
+  unique("daily_records_user_id_panel_date_key").on(t.userId, t.panel, t.date),
+])
 
 export const deliveries = pgTable("deliveries", {
   id:           serial("id").primaryKey(),
