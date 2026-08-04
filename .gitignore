@@ -9,8 +9,15 @@ __v0_jsx-dev-runtime.ts
 # Environment variables
 .env
 .env*.local
+client_secret*.json
 
 # Common ignores
 node_modules
 .next/
 .DS_Store
+
+# Claude Code local config
+.claude/
+
+# Windows shortcuts
+*.lnk

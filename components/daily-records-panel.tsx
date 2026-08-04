@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
@@ -360,15 +360,15 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
                       .sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime())
                     if (!mr.length) return null
                     return (
-                      <>
-                        <TableRow key={`${year}-${month}-hdr`} className="border-t border-border">
+                      <Fragment key={`${year}-${month}`}>
+                        <TableRow className="border-t border-border">
                           <TableCell colSpan={9} className="bg-secondary/40 py-1.5 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {MONTHS[month]} {year}
                           </TableCell>
                         </TableRow>
                         {mr.map(r => <RecordRow key={r.id} record={r} panel={panel} />)}
-                        <SummaryBar key={`${year}-${month}-s`} label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
-                      </>
+                        <SummaryBar label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
+                      </Fragment>
                     )
                   })
                 })}

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
-import { verifyPassword, hashPassword } from "@/lib/auth"
+import { verifyPassword, hashPassword, isLegacyHash } from "@/lib/auth"
 import { clearUserId, getUserId, setUserId } from "@/lib/session"
 
 export async function requireUser() {
@@ -22,6 +22,10 @@ export async function login(formData: FormData) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (!user?.passwordHash) return { error: "E-mail ou senha inválidos." }
   if (!verifyPassword(password, user.passwordHash)) return { error: "E-mail ou senha inválidos." }
+  // Migra silenciosamente contas com hash no formato antigo (HMAC) para scrypt.
+  if (isLegacyHash(user.passwordHash)) {
+    await db.update(users).set({ passwordHash: hashPassword(password) }).where(eq(users.id, user.id))
+  }
   await setUserId(user.id)
   redirect("/select")
 }
@@ -54,13 +58,12 @@ export async function loginWithGoogle(googleId: string, email: string, name?: st
       avatarUrl: existing.avatarUrl ?? (picture ?? undefined),
     }).where(eq(users.id, existing.id))
     await setUserId(existing.id)
-    redirect("/select")
+    return
   }
   const [created] = await db.insert(users).values({
     name: name ?? email.split("@")[0], email: normalizedEmail, googleId, avatarUrl: picture ?? undefined,
   }).returning()
   await setUserId(created.id)
-  redirect("/select")
 }
 
 export async function logout() {

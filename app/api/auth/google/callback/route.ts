@@ -44,14 +44,15 @@ export async function GET(request: NextRequest) {
 
     const profile = await profileRes.json()
 
-    // loginWithGoogle faz upsert e redireciona para /dashboard
+    // loginWithGoogle faz o upsert do usuário e seta o cookie de sessão
+    // (não chama redirect() aqui dentro — isso quebraria o try/catch, já que
+    // redirect() funciona lançando uma exceção especial)
     await loginWithGoogle(profile.id, profile.email, profile.name, profile.picture)
   } catch (err) {
     console.error("Google OAuth error:", err)
     return NextResponse.redirect(`${baseUrl}/?error=google_failed`)
   }
 
-  // loginWithGoogle já faz redirect — este ponto não é alcançado em sucesso
-  return NextResponse.redirect(`${baseUrl}/dashboard`)
+  return NextResponse.redirect(`${baseUrl}/select`)
 }
 
