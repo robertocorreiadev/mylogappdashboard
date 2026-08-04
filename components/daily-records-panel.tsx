@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
@@ -13,10 +13,9 @@ import {
   DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, MONTHS } from "@/lib/format"
 
-const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
-const DAYS   = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
+const DAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
 
 function fmtBR(s: string) {
   const d = new Date(s + "T00:00:00")
@@ -257,9 +256,17 @@ function RecordRow({ record, panel = "jadlog" }: { record: DailyRecord; panel?: 
 }
 
 // ── Painel principal ──────────────────────────────────────────
-export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: DailyRecord[]; panel?: string }) {
-  const [selMonth, setSelMonth] = useState<number|null>(null)
-  const [filter, setFilter]     = useState<"all"|"filled"|"pending">("all")
+export function DailyRecordsPanel({
+  records, panel = "jadlog", year, month, onYearChange, onMonthChange,
+}: {
+  records: DailyRecord[]
+  panel?: string
+  year: number | null
+  month: number | null
+  onYearChange: (year: number | null) => void
+  onMonthChange: (month: number | null) => void
+}) {
+  const [filter, setFilter] = useState<"all"|"filled"|"pending">("all")
 
   const grouped = useMemo(() => {
     const map: Record<number, Record<number, DailyRecord[]>> = {}
@@ -274,9 +281,11 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
   }, [records])
 
   const years = Object.keys(grouped).map(Number).sort((a,b)=>b-a)
-  const allMonths = useMemo(() =>
-    Array.from(new Set(records.map(r => new Date(r.date+"T00:00:00").getMonth()))).sort((a,b)=>a-b),
-    [records])
+  const displayYears = year !== null ? (grouped[year] ? [year] : []) : years
+  const monthsForSelect = useMemo(() => {
+    const source = year !== null ? Object.values(grouped[year] ?? {}).flat() : records
+    return Array.from(new Set(source.map(r => new Date(r.date+"T00:00:00").getMonth()))).sort((a,b)=>a-b)
+  }, [records, grouped, year])
   const annualTotals = useMemo(() => {
     const out: Record<number, DailyRecord[]> = {}
     for (const y of years) out[y] = Object.values(grouped[y]).flat()
@@ -304,19 +313,27 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
         <div className="mb-3 flex items-center gap-2">
           <ClipboardList className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Histórico {new Date().getFullYear()}
+            Histórico{year !== null ? ` ${year}` : ""}
           </h2>
         </div>
 
         {/* Filtros */}
         <div className="mb-3 flex flex-wrap gap-2">
           <select
-            value={selMonth ?? ""}
-            onChange={e => setSelMonth(e.target.value===""?null:Number(e.target.value))}
+            value={year ?? ""}
+            onChange={e => onYearChange(e.target.value===""?null:Number(e.target.value))}
+            className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
+          >
+            <option value="">Todos os anos</option>
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select
+            value={month ?? ""}
+            onChange={e => onMonthChange(e.target.value===""?null:Number(e.target.value))}
             className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
           >
             <option value="">Todos os meses</option>
-            {allMonths.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
+            {monthsForSelect.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
           </select>
           <select value={filter} onChange={e => setFilter(e.target.value as "all"|"filled"|"pending")}
             className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground">
@@ -349,9 +366,9 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {years.map(year => {
-                  const months = selMonth !== null
-                    ? (grouped[year]?.[selMonth] ? [selMonth] : [])
+                {displayYears.map(year => {
+                  const months = month !== null
+                    ? (grouped[year]?.[month] ? [month] : [])
                     : Object.keys(grouped[year]).map(Number).sort((a,b)=>b-a)
 
                   return months.map(month => {
@@ -360,19 +377,19 @@ export function DailyRecordsPanel({ records, panel = "jadlog" }: { records: Dail
                       .sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime())
                     if (!mr.length) return null
                     return (
-                      <>
-                        <TableRow key={`${year}-${month}-hdr`} className="border-t border-border">
+                      <Fragment key={`${year}-${month}`}>
+                        <TableRow className="border-t border-border">
                           <TableCell colSpan={9} className="bg-secondary/40 py-1.5 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                             {MONTHS[month]} {year}
                           </TableCell>
                         </TableRow>
                         {mr.map(r => <RecordRow key={r.id} record={r} panel={panel} />)}
-                        <SummaryBar key={`${year}-${month}-s`} label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
-                      </>
+                        <SummaryBar label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
+                      </Fragment>
                     )
                   })
                 })}
-                {years.map(year => (
+                {displayYears.map(year => (
                   <SummaryBar key={`${year}-ann`} label={`Resumo Anual ${year}`} records={annualTotals[year]} isAnnual />
                 ))}
               </TableBody>

@@ -4,7 +4,6 @@ import { getDeliveries } from "@/app/actions/deliveries"
 import { getTransactions } from "@/app/actions/transactions"
 import { getDailyRecords } from "@/app/actions/daily-records"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { StatsOverview } from "@/components/stats-overview"
 import { DashboardTabs } from "@/components/dashboard-tabs"
 
 const PANEL = "panel2" as const
@@ -33,11 +32,6 @@ export default async function Panel2Page() {
         userEmail={user.email}
         panelName="Painel 2"
         panel={PANEL}
-      />
-      <StatsOverview
-        deliveries={deliveries}
-        transactions={transactions}
-        dailyRecords={dailyRecords}
       />
       <DashboardTabs
         deliveries={deliveries}
