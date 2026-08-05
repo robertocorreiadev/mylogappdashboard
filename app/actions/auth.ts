@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
-import { verifyPassword, hashPassword, isLegacyHash } from "@/lib/auth"
+import { verifyPassword, hashPassword, isLegacyHash, isAdminEmail } from "@/lib/auth"
 import { clearUserId, getUserId, setUserId } from "@/lib/session"
 
 export async function requireUser() {
@@ -12,6 +12,13 @@ export async function requireUser() {
   if (!userId) throw new Error("Não autenticado")
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
   if (!user) throw new Error("Usuário inválido")
+  return user
+}
+
+// ── Acesso restrito de administração ──────────────────────────
+export async function requireAdmin() {
+  const user = await requireUser()
+  if (!isAdminEmail(user.email)) throw new Error("Acesso restrito.")
   return user
 }
 

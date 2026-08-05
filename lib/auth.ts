@@ -32,3 +32,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 export function isLegacyHash(stored: string): boolean {
   return stored.split(":").length === 2
 }
+
+export function isAdminEmail(email: string): boolean {
+  return !!process.env.ADMIN_EMAIL && email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase()
+}

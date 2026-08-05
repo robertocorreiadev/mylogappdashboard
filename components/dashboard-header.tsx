@@ -89,7 +89,7 @@ function PasswordForm() {
 }
 
 // ── Header principal ──────────────────────────────────────────
-export function DashboardHeader({ userName, userEmail, panelName, panel }: { userName: string; userEmail: string; panelName?: string; panel?: string }) {
+export function DashboardHeader({ userName, userEmail, panelName, panel, isAdmin = false }: { userName: string; userEmail: string; panelName?: string; panel?: string; isAdmin?: boolean }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const year = new Date().getFullYear()
 
@@ -123,6 +123,16 @@ export function DashboardHeader({ userName, userEmail, panelName, panel }: { use
           >
             <Settings className="h-4 w-4" />
           </Button>
+
+          {/* Botão Gestão de usuários (somente admin) */}
+          {isAdmin && (
+            <a href="/usuarios">
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                <User className="h-4 w-4" aria-hidden="true" />
+                Usuários
+              </Button>
+            </a>
+          )}
 
           {/* Botão Trocar painel */}
           <a href="/select">
