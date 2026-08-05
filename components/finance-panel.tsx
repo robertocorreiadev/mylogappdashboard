@@ -36,7 +36,7 @@ function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Tra
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
           <Label htmlFor="type">Tipo</Label>
-          <Select name="type" value={type} onValueChange={setType}>
+          <Select name="type" value={type} onValueChange={(value) => setType(value ?? "receita")}>
             <SelectTrigger id="type"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="receita">Receita</SelectItem>
