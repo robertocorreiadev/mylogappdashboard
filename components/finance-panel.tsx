@@ -154,10 +154,8 @@ export function FinancePanel({ transactions, panel = "jadlog" }: { transactions:
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground">Lançamentos financeiros</h2>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />Novo lançamento
-              </Button>
+            <DialogTrigger render={<Button size="sm" className="gap-2" />}>
+              <Plus className="h-4 w-4" />Novo lançamento
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
