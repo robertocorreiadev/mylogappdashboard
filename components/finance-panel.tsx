@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
 import { createTransaction, deleteTransaction, updateTransaction } from "@/app/actions/transactions"
@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency, formatDate } from "@/lib/format"
+import { formatCurrency, formatDate, MONTHS } from "@/lib/format"
 
 function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Transaction; onClose: () => void; panel?: string }) {
   const [isPending, startTransition] = useTransition()
@@ -123,11 +123,39 @@ function TransactionRow({ transaction, panel = "jadlog" }: { transaction: Transa
   )
 }
 
-export function FinancePanel({ transactions, panel = "jadlog" }: { transactions: Transaction[]; panel?: string }) {
+export function FinancePanel({
+  transactions, panel = "jadlog", year, month, onYearChange, onMonthChange,
+}: {
+  transactions: Transaction[]
+  panel?: string
+  year: number | null
+  month: number | null
+  onYearChange: (year: number | null) => void
+  onMonthChange: (month: number | null) => void
+}) {
   const [open, setOpen] = useState(false)
 
-  const receita = transactions.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
-  const despesa = transactions.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
+  const allYears = useMemo(() =>
+    Array.from(new Set(transactions.map(t => new Date(t.date + "T00:00:00").getFullYear()))).sort((a, b) => b - a),
+    [transactions])
+
+  const monthsForSelect = useMemo(() => {
+    const source = year === null ? transactions : transactions.filter(t => new Date(t.date + "T00:00:00").getFullYear() === year)
+    return Array.from(new Set(source.map(t => new Date(t.date + "T00:00:00").getMonth()))).sort((a, b) => a - b)
+  }, [transactions, year])
+
+  const filtered = useMemo(() => {
+    if (year === null && month === null) return transactions
+    return transactions.filter(t => {
+      const d = new Date(t.date + "T00:00:00")
+      if (year !== null && d.getFullYear() !== year) return false
+      if (month !== null && d.getMonth() !== month) return false
+      return true
+    })
+  }, [transactions, year, month])
+
+  const receita = filtered.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
+  const despesa = filtered.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
   const saldo   = receita - despesa
 
   return (
@@ -151,8 +179,26 @@ export function FinancePanel({ transactions, panel = "jadlog" }: { transactions:
           </div>
         </div>
 
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">Lançamentos financeiros</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">Lançamentos financeiros</h2>
+            <select
+              value={year ?? ""}
+              onChange={e => onYearChange(e.target.value === "" ? null : Number(e.target.value))}
+              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
+            >
+              <option value="">Todos os anos</option>
+              {allYears.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <select
+              value={month ?? ""}
+              onChange={e => onMonthChange(e.target.value === "" ? null : Number(e.target.value))}
+              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
+            >
+              <option value="">Todos os meses</option>
+              {monthsForSelect.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
+            </select>
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger render={<Button size="sm" className="gap-2" />}>
               <Plus className="h-4 w-4" />Novo lançamento
@@ -167,10 +213,12 @@ export function FinancePanel({ transactions, panel = "jadlog" }: { transactions:
           </Dialog>
         </div>
 
-        {transactions.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Wallet className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Nenhum lançamento registrado</p>
+            <p className="text-sm font-medium text-foreground">
+              {transactions.length === 0 ? "Nenhum lançamento registrado" : "Nenhum lançamento no período selecionado"}
+            </p>
             <p className="text-xs text-muted-foreground">Clique em &quot;Novo lançamento&quot; para começar.</p>
           </div>
         ) : (
@@ -187,7 +235,7 @@ export function FinancePanel({ transactions, panel = "jadlog" }: { transactions:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map(t => <TransactionRow key={t.id} transaction={t} panel={panel} />)}
+                {filtered.map(t => <TransactionRow key={t.id} transaction={t} panel={panel} />)}
               </TableBody>
             </Table>
           </div>

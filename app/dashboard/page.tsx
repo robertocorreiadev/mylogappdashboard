@@ -5,7 +5,6 @@ import { getDeliveries } from "@/app/actions/deliveries"
 import { getTransactions } from "@/app/actions/transactions"
 import { getDailyRecords } from "@/app/actions/daily-records"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { StatsOverview } from "@/components/stats-overview"
 import { DashboardTabs } from "@/components/dashboard-tabs"
 
 const PANEL = "jadlog" as const
@@ -32,11 +31,6 @@ export default async function DashboardPage() {
         panelName="JADLOG"
         panel={PANEL}
         isAdmin={isAdminEmail(user.email)}
-      />
-      <StatsOverview
-        deliveries={deliveries}
-        transactions={transactions}
-        dailyRecords={dailyRecords}
       />
       <DashboardTabs
         deliveries={deliveries}
