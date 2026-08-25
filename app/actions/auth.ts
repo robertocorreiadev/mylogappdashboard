@@ -23,7 +23,7 @@ export async function requireAdmin() {
 }
 
 export async function login(formData: FormData) {
-  const email    = formData.get("email")?.toString().trim() || ""
+  const email    = formData.get("email")?.toString().trim().toLowerCase() || ""
   const password = formData.get("password")?.toString() || ""
   if (!email || !password) return { error: "E-mail e senha são obrigatórios." }
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
