@@ -6,6 +6,7 @@ import { db } from "@/lib/db"
 import { users } from "@/lib/db/schema"
 import { verifyPassword, hashPassword, isLegacyHash, isAdminEmail } from "@/lib/auth"
 import { clearUserId, getUserId, setUserId } from "@/lib/session"
+import { isLocked, registerFailedAttempt, clearAttempts } from "@/lib/rate-limit"
 
 export async function requireUser() {
   const userId = await getUserId()
@@ -26,9 +27,19 @@ export async function login(formData: FormData) {
   const email    = formData.get("email")?.toString().trim().toLowerCase() || ""
   const password = formData.get("password")?.toString() || ""
   if (!email || !password) return { error: "E-mail e senha são obrigatórios." }
+
+  const { locked, retryAfterMs } = isLocked(email)
+  if (locked) {
+    const minutes = Math.ceil(retryAfterMs / 60000)
+    return { error: `Muitas tentativas. Tente novamente em ${minutes} min.` }
+  }
+
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
-  if (!user?.passwordHash) return { error: "E-mail ou senha inválidos." }
-  if (!verifyPassword(password, user.passwordHash)) return { error: "E-mail ou senha inválidos." }
+  if (!user?.passwordHash || !verifyPassword(password, user.passwordHash)) {
+    registerFailedAttempt(email)
+    return { error: "E-mail ou senha inválidos." }
+  }
+  clearAttempts(email)
   // Migra silenciosamente contas com hash no formato antigo (HMAC) para scrypt.
   if (isLegacyHash(user.passwordHash)) {
     await db.update(users).set({ passwordHash: hashPassword(password) }).where(eq(users.id, user.id))
