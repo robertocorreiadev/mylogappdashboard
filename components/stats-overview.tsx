@@ -43,7 +43,9 @@ export function StatsOverview({
             <CardContent className="flex items-start justify-between gap-2 p-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.label}</p>
-                <p className="mt-1 text-xl font-bold text-foreground">{c.value}</p>
+                {/* Hierarquia vem do tamanho/tipografia de exibição, não do peso —
+                    serifada só neste número (destaque do card), sans no resto. */}
+                <p className="mt-1 font-display text-2xl font-normal tabular-nums text-foreground">{c.value}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{c.hint}</p>
               </div>
               <c.icon className={`h-5 w-5 shrink-0 ${c.color}`} aria-hidden="true" />

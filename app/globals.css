@@ -8,6 +8,10 @@
   --font-heading: var(--font-sans);
   --font-sans: var(--font-geist-sans), 'Geist Fallback';
   --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  /* Stack de sistema (sem webfont) reservado pra números de destaque/KPI —
+     dá hierarquia tipográfica real ao conteúdo financeiro do dashboard sem
+     custo de rede extra. Ver stats-overview.tsx. */
+  --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,6 +52,17 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Cor de marca própria do MyLog: índigo/violeta (hue ~255) — escolhida por
+   eliminação, não por gosto: laranja já é a cor de conteúdo do painel
+   "jadlog" (colidiria marca-vs-dado), azul já é a cor do "panel2", verde já
+   é a cor semântica de saldo positivo, vermelho já é destructive. Índigo é a
+   família de matiz mais distante de todas as quatro já reservadas no app.
+   Continua sem ser o roxo-azulado genérico de SaaS (~hue 265, tipo
+   Stripe/Linear) — puxado mais pro violeta/ameixa (~255) de propósito.
+   Tema escuro continua sendo o padrão incondicional (comportamento
+   inalterado pro usuário atual) — o tema claro abaixo é opt-in via
+   `[data-theme="light"]`, sem troca automática por enquanto (protótipo:
+   falta construir o toggle de UI antes de acoplar a `prefers-color-scheme`). */
 :root {
   color-scheme: dark;
   --background: #0f1117;
@@ -56,8 +71,8 @@
   --card-foreground: #e8eaf0;
   --popover: #1a1d23;
   --popover-foreground: #e8eaf0;
-  --primary: #f5a623;
-  --primary-foreground: #1a1d23;
+  --primary: #8d7bdb;
+  --primary-foreground: #14101f;
   --secondary: #22262f;
   --secondary-foreground: #e8eaf0;
   --muted: #22262f;
@@ -67,8 +82,8 @@
   --destructive: #e5484d;
   --border: #2e333d;
   --input: #2e333d;
-  --ring: #f5a623;
-  --chart-1: #f5a623;
+  --ring: #8d7bdb;
+  --chart-1: #8d7bdb;
   --chart-2: #3dd68c;
   --chart-3: #e5484d;
   --chart-4: #4f9dff;
@@ -76,47 +91,51 @@
   --radius: 0.625rem;
   --sidebar: #1a1d23;
   --sidebar-foreground: #e8eaf0;
-  --sidebar-primary: #f5a623;
-  --sidebar-primary-foreground: #1a1d23;
+  --sidebar-primary: #8d7bdb;
+  --sidebar-primary-foreground: #14101f;
   --sidebar-accent: #22262f;
   --sidebar-accent-foreground: #e8eaf0;
   --sidebar-border: #2e333d;
-  --sidebar-ring: #f5a623;
+  --sidebar-ring: #8d7bdb;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Tema claro real (mesmos nomes de token, valores próprios — nunca
+   reaproveita o par claro/escuro de outro projeto). Opt-in via
+   `data-theme="light"` no <html> (ainda sem toggle de UI, ver comentário
+   acima) — pensado pra já existir pronto quando o toggle for construído. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f4f5f8;
+  --foreground: #14171c;
+  --card: #ffffff;
+  --card-foreground: #14171c;
+  --popover: #ffffff;
+  --popover-foreground: #14171c;
+  --primary: #5b3fa8;
+  --primary-foreground: #ffffff;
+  --secondary: #e7e8ec;
+  --secondary-foreground: #14171c;
+  --muted: #e7e8ec;
+  --muted-foreground: #5b6270;
+  --accent: #eceef2;
+  --accent-foreground: #14171c;
+  --destructive: #c8353b;
+  --border: rgba(20, 23, 28, 0.12);
+  --input: rgba(20, 23, 28, 0.18);
+  --ring: #5b3fa8;
+  --chart-1: #5b3fa8;
+  --chart-2: #1f7a52;
+  --chart-3: #c8353b;
+  --chart-4: #1f6fb2;
+  --chart-5: #5b6270;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #14171c;
+  --sidebar-primary: #5b3fa8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceef2;
+  --sidebar-accent-foreground: #14171c;
+  --sidebar-border: rgba(20, 23, 28, 0.12);
+  --sidebar-ring: #5b3fa8;
 }
 
 @layer base {
@@ -139,6 +158,17 @@
   --chart-1: #4f9dff;
   --chart-2: #3dd68c;
   --chart-3: #e5484d;
-  --chart-4: #f5a623;
+  --chart-4: #8d7bdb;
   --chart-5: #8891a4;
+}
+
+:root[data-theme="light"] [data-panel="panel2"] {
+  --primary: #1f6fb2;
+  --primary-foreground: #ffffff;
+  --ring: #1f6fb2;
+  --chart-1: #1f6fb2;
+  --chart-2: #1f7a52;
+  --chart-3: #c8353b;
+  --chart-4: #5b3fa8;
+  --chart-5: #5b6270;
 }
