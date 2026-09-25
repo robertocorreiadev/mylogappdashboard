@@ -16,11 +16,20 @@ cada item). Produção (Neon) já rodou os scripts de migração
 `migrate-multitenant-002-backfill-legacy-org.sql` — não precisa rodar de
 novo.
 
-**Próximo passo pendente ao momento desta atualização**: commit + push pro
-GitHub (permissão já concedida pelo usuário) — se a sessão foi interrompida
-antes disso, rode `git status` pra confirmar se já foi feito; se ainda
-houver mudanças não commitadas equivalentes ao que este arquivo descreve,
-prossiga com o commit.
+**Commit + push já feitos**: `1f9ec5c` em `main`, empurrado pra
+`origin/main` (`7fa3ffe..1f9ec5c`) em 2026-09-25. Não repita — confira
+`git log --oneline -3` antes de commitar de novo.
+
+Próximos passos em aberto (não implementados, ver seção "Ideias
+registradas" no fim deste arquivo e `TODO.md`): exportação CSV/PDF,
+painéis customizáveis por organização, rate limit no aceite de convite.
+
+O texto abaixo é o histórico da decisão de arquitetura do ADMIN MASTER —
+não precisa reler se `git log --oneline -3` já mostra o commit `1f9ec5c`
+(ou um commit posterior). Se a sessão foi interrompida ANTES desse commit
+existir, rode `git status`: se as mudanças descritas abaixo ainda estiverem
+no working tree sem commit, prossiga direto pro commit + push (permissão já
+concedida pelo usuário) em vez de reimplementar do zero.
 
 ## ADMIN MASTER — concluído (histórico da decisão)
 
