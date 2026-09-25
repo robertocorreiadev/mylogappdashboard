@@ -37,8 +37,15 @@ export type MembershipContext = {
   membershipId: number
 }
 
-export async function requireMembership(role?: "gestor" | "entregador"): Promise<MembershipContext> {
-  const user = await requireUser()
+// `knownUser` deixa o chamador reaproveitar um `requireUser()` já feito no
+// mesmo request (ex.: a página resolve o usuário uma vez e repassa pras
+// server actions que ela mesma invoca) em vez de repetir o SELECT — quando
+// omitido, o comportamento é idêntico ao de antes (resolve sozinho).
+export async function requireMembership(
+  role?: "gestor" | "entregador",
+  knownUser?: Awaited<ReturnType<typeof requireUser>>,
+): Promise<MembershipContext> {
+  const user = knownUser ?? await requireUser()
   const conditions = [eq(memberships.userId, user.id), eq(memberships.status, "active")]
   if (role) conditions.push(eq(memberships.role, role))
   const [membership] = await db.select().from(memberships).where(and(...conditions)).limit(1)
@@ -51,12 +58,34 @@ export async function requireMembership(role?: "gestor" | "entregador"): Promise
   }
 }
 
-export async function requireGestor() {
-  return requireMembership("gestor")
+export async function requireGestor(knownUser?: Awaited<ReturnType<typeof requireUser>>) {
+  return requireMembership("gestor", knownUser)
 }
 
-export async function requireEntregador() {
-  return requireMembership("entregador")
+export async function requireEntregador(knownUser?: Awaited<ReturnType<typeof requireUser>>) {
+  return requireMembership("entregador", knownUser)
+}
+
+// ── Modo de visualização (gestor normal vs. ADMIN MASTER) ───────
+// Ponto único que decide "isso é o admin master ou um gestor normal?" — antes
+// dessa consolidação, isAdminEmail() era checado ad-hoc em cada página que
+// precisava distinguir os dois modos. Não é bug hoje (cada chamada delega pra
+// mesma fonte única em lib/auth.ts), mas é um padrão frágil: se o conceito de
+// "admin" mudar no futuro (múltiplos admins, flag no banco), só este helper
+// precisa mudar. Uso pensado pra telas onde os dois modos são EXCLUSIVOS
+// (ex.: /gestor/entregadores/[userId], que usa admin-override OU o
+// drill-down normal do gestor, nunca os dois) — uma tela onde "é admin" é só
+// um flag adicional sobre um requireGestor() sempre obrigatório (ex.:
+// /gestor/auditoria) continua resolvendo os dois fatos separadamente.
+export type ViewerMode =
+  | { mode: "admin"; user: Awaited<ReturnType<typeof requireUser>> }
+  | ({ mode: "gestor" } & MembershipContext)
+
+export async function resolveViewerMode(): Promise<ViewerMode> {
+  const user = await requireUser()
+  if (isAdminEmail(user.email)) return { mode: "admin", user }
+  const ctx = await requireGestor(user)
+  return { mode: "gestor", ...ctx }
 }
 
 // Não lança erro — usado por /select para decidir quais opções mostrar
