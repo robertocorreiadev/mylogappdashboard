@@ -17,13 +17,29 @@ function periodLabelFor(prefix: string, year: number | null, month: number | nul
   return `${prefix} — ${MONTHS[month as number]} (todos os anos)`
 }
 
+// Overrides de ação — usado pelo modo ADMIN MASTER para reaproveitar a MESMA
+// UI do entregador escrevendo em nome de um alvo de qualquer organização,
+// em vez de duplicar componentes (ver app/actions/admin-override.ts).
+export type PanelActions = {
+  onSaveDailyRecord?: Parameters<typeof DailyRecordsPanel>[0]["onSave"]
+  onDeleteDailyRecord?: Parameters<typeof DailyRecordsPanel>[0]["onDelete"]
+  onCreateDelivery?: Parameters<typeof DeliveriesPanel>[0]["onCreate"]
+  onUpdateDeliveryStatus?: Parameters<typeof DeliveriesPanel>[0]["onUpdateStatus"]
+  onDeleteDelivery?: Parameters<typeof DeliveriesPanel>[0]["onDelete"]
+  onCreateTransaction?: Parameters<typeof FinancePanel>[0]["onCreate"]
+  onUpdateTransaction?: Parameters<typeof FinancePanel>[0]["onUpdate"]
+  onDeleteTransaction?: Parameters<typeof FinancePanel>[0]["onDelete"]
+}
+
 export function DashboardTabs({
-  deliveries, transactions, dailyRecords, panel = "jadlog",
+  deliveries, transactions, dailyRecords, panel = "jadlog", readOnly = false, actions,
 }: {
   deliveries: Delivery[]
   transactions: Transaction[]
   dailyRecords: DailyRecord[]
   panel?: string
+  readOnly?: boolean
+  actions?: PanelActions
 }) {
   const [activeTab, setActiveTab]       = useState("daily")
   const [dailyYear, setDailyYear]       = useState<number | null>(null)
@@ -63,10 +79,20 @@ export function DashboardTabs({
             month={dailyMonth}
             onYearChange={setDailyYear}
             onMonthChange={setDailyMonth}
+            readOnly={readOnly}
+            {...(actions?.onSaveDailyRecord ? { onSave: actions.onSaveDailyRecord } : {})}
+            {...(actions?.onDeleteDailyRecord ? { onDelete: actions.onDeleteDailyRecord } : {})}
           />
         </TabsContent>
         <TabsContent value="deliveries">
-          <DeliveriesPanel deliveries={deliveries} panel={panel} />
+          <DeliveriesPanel
+            deliveries={deliveries}
+            panel={panel}
+            readOnly={readOnly}
+            {...(actions?.onCreateDelivery ? { onCreate: actions.onCreateDelivery } : {})}
+            {...(actions?.onUpdateDeliveryStatus ? { onUpdateStatus: actions.onUpdateDeliveryStatus } : {})}
+            {...(actions?.onDeleteDelivery ? { onDelete: actions.onDeleteDelivery } : {})}
+          />
         </TabsContent>
         <TabsContent value="finance">
           <FinancePanel
@@ -76,6 +102,10 @@ export function DashboardTabs({
             month={financeMonth}
             onYearChange={setFinanceYear}
             onMonthChange={setFinanceMonth}
+            readOnly={readOnly}
+            {...(actions?.onCreateTransaction ? { onCreate: actions.onCreateTransaction } : {})}
+            {...(actions?.onUpdateTransaction ? { onUpdate: actions.onUpdateTransaction } : {})}
+            {...(actions?.onDeleteTransaction ? { onDelete: actions.onDeleteTransaction } : {})}
           />
         </TabsContent>
         <TabsContent value="overview">

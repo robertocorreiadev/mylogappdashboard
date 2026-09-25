@@ -4,6 +4,10 @@ import { useMemo, useState, useTransition } from "react"
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
 import { createTransaction, deleteTransaction, updateTransaction } from "@/app/actions/transactions"
+
+type CreateAction = (formData: FormData) => Promise<void>
+type UpdateAction = (formData: FormData) => Promise<void>
+type DeleteAction = (id: number) => Promise<void>
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,14 +22,16 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDate, MONTHS } from "@/lib/format"
 
-function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Transaction; onClose: () => void; panel?: string }) {
+function TransactionForm({
+  initial, onClose, panel = "jadlog", onCreate = createTransaction, onUpdate = updateTransaction,
+}: { initial?: Transaction; onClose: () => void; panel?: string; onCreate?: CreateAction; onUpdate?: UpdateAction }) {
   const [isPending, startTransition] = useTransition()
   const [type, setType] = useState(initial?.type ?? "receita")
 
   function handleSubmit(fd: FormData) {
     startTransition(async () => {
-      if (initial) { fd.append("id", String(initial.id)); await updateTransaction(fd) }
-      else await createTransaction(fd)
+      if (initial) { fd.append("id", String(initial.id)); await onUpdate(fd) }
+      else await onCreate(fd)
       onClose()
     })
   }
@@ -76,7 +82,17 @@ function TransactionForm({ initial, onClose, panel = "jadlog" }: { initial?: Tra
   )
 }
 
-function TransactionRow({ transaction, panel = "jadlog" }: { transaction: Transaction; panel?: string }) {
+function TransactionRow({
+  transaction, panel = "jadlog", readOnly = false,
+  onCreate = createTransaction, onUpdate = updateTransaction, onDelete = deleteTransaction,
+}: {
+  transaction: Transaction
+  panel?: string
+  readOnly?: boolean
+  onCreate?: CreateAction
+  onUpdate?: UpdateAction
+  onDelete?: DeleteAction
+}) {
   const [editOpen, setEditOpen]      = useState(false)
   const [isPending, startTransition] = useTransition()
   const isReceita = transaction.type === "receita"
@@ -97,34 +113,39 @@ function TransactionRow({ transaction, panel = "jadlog" }: { transaction: Transa
           {isReceita ? "+" : "−"}{formatCurrency(transaction.amount)}
         </TableCell>
         <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)} aria-label="Editar">
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              disabled={isPending} onClick={() => startTransition(() => deleteTransaction(transaction.id))}
-              aria-label="Excluir">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center justify-end gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
+                onClick={() => setEditOpen(true)} aria-label="Editar">
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                disabled={isPending} onClick={() => startTransition(() => onDelete(transaction.id))}
+                aria-label="Excluir">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TableCell>
       </TableRow>
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar lançamento</DialogTitle>
-            <DialogDescription>Altere os dados e salve.</DialogDescription>
-          </DialogHeader>
-          <TransactionForm initial={transaction} onClose={() => setEditOpen(false)} panel={panel} />
-        </DialogContent>
-      </Dialog>
+      {!readOnly && (
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar lançamento</DialogTitle>
+              <DialogDescription>Altere os dados e salve.</DialogDescription>
+            </DialogHeader>
+            <TransactionForm initial={transaction} onClose={() => setEditOpen(false)} panel={panel} onCreate={onCreate} onUpdate={onUpdate} />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
 
 export function FinancePanel({
-  transactions, panel = "jadlog", year, month, onYearChange, onMonthChange,
+  transactions, panel = "jadlog", year, month, onYearChange, onMonthChange, readOnly = false,
+  onCreate = createTransaction, onUpdate = updateTransaction, onDelete = deleteTransaction,
 }: {
   transactions: Transaction[]
   panel?: string
@@ -132,6 +153,10 @@ export function FinancePanel({
   month: number | null
   onYearChange: (year: number | null) => void
   onMonthChange: (month: number | null) => void
+  readOnly?: boolean
+  onCreate?: CreateAction
+  onUpdate?: UpdateAction
+  onDelete?: DeleteAction
 }) {
   const [open, setOpen] = useState(false)
 
@@ -199,18 +224,20 @@ export function FinancePanel({
               {monthsForSelect.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
             </select>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button size="sm" className="gap-2" />}>
-              <Plus className="h-4 w-4" />Novo lançamento
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo lançamento</DialogTitle>
-                <DialogDescription>Registre uma receita ou despesa.</DialogDescription>
-              </DialogHeader>
-              <TransactionForm onClose={() => setOpen(false)} panel={panel} />
-            </DialogContent>
-          </Dialog>
+          {!readOnly && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger render={<Button size="sm" className="gap-2" />}>
+                <Plus className="h-4 w-4" />Novo lançamento
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Novo lançamento</DialogTitle>
+                  <DialogDescription>Registre uma receita ou despesa.</DialogDescription>
+                </DialogHeader>
+                <TransactionForm onClose={() => setOpen(false)} panel={panel} onCreate={onCreate} onUpdate={onUpdate} />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {filtered.length === 0 ? (
@@ -219,7 +246,7 @@ export function FinancePanel({
             <p className="text-sm font-medium text-foreground">
               {transactions.length === 0 ? "Nenhum lançamento registrado" : "Nenhum lançamento no período selecionado"}
             </p>
-            <p className="text-xs text-muted-foreground">Clique em &quot;Novo lançamento&quot; para começar.</p>
+            {!readOnly && <p className="text-xs text-muted-foreground">Clique em &quot;Novo lançamento&quot; para começar.</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -235,7 +262,9 @@ export function FinancePanel({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(t => <TransactionRow key={t.id} transaction={t} panel={panel} />)}
+                {filtered.map(t => (
+                  <TransactionRow key={t.id} transaction={t} panel={panel} readOnly={readOnly} onCreate={onCreate} onUpdate={onUpdate} onDelete={onDelete} />
+                ))}
               </TableBody>
             </Table>
           </div>

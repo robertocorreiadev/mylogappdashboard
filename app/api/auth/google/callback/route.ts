@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { loginWithGoogle } from "@/app/actions/auth"
 
 const STATE_COOKIE = "google_oauth_state"
+const INVITE_COOKIE = "pending_invite_token"
 
 export async function GET(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!
@@ -20,6 +21,8 @@ export async function GET(request: NextRequest) {
     response.cookies.delete(STATE_COOKIE)
     return response
   }
+
+  const inviteToken = request.cookies.get(INVITE_COOKIE)?.value ?? null
 
   try {
     // Troca code por access_token
@@ -47,12 +50,14 @@ export async function GET(request: NextRequest) {
     // loginWithGoogle faz o upsert do usuário e seta o cookie de sessão
     // (não chama redirect() aqui dentro — isso quebraria o try/catch, já que
     // redirect() funciona lançando uma exceção especial)
-    await loginWithGoogle(profile.id, profile.email, profile.name, profile.picture)
+    await loginWithGoogle(profile.id, profile.email, profile.name, profile.picture, inviteToken)
   } catch (err) {
     console.error("Google OAuth error:", err)
     return NextResponse.redirect(`${baseUrl}/?error=google_failed`)
   }
 
-  return NextResponse.redirect(`${baseUrl}/select`)
+  const response = NextResponse.redirect(`${baseUrl}/select`)
+  if (inviteToken) response.cookies.delete(INVITE_COOKIE)
+  return response
 }
 

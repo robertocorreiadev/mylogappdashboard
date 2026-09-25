@@ -4,6 +4,9 @@ import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
+
+type SaveAction = (formData: FormData) => Promise<{ error?: string; success?: boolean }>
+type DeleteAction = (id: number) => Promise<void>
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -58,7 +61,9 @@ function SummaryBar({ label, records, isAnnual = false }: { label: string; recor
 }
 
 // ── Formulário de registro ────────────────────────────────────
-function RecordForm({ initial, onClose, panel = "jadlog" }: { initial?: Partial<DailyRecord>; onClose: () => void; panel?: string }) {
+function RecordForm({
+  initial, onClose, panel = "jadlog", onSave = saveDailyRecord,
+}: { initial?: Partial<DailyRecord>; onClose: () => void; panel?: string; onSave?: SaveAction }) {
   const today = new Date().toISOString().slice(0, 10)
   const [pending, startTransition] = useTransition()
   const [error, setError]          = useState<string | null>(null)
@@ -79,7 +84,7 @@ function RecordForm({ initial, onClose, panel = "jadlog" }: { initial?: Partial<
     // Garante que o valor exato da string vai para o FormData
     fd.set("valuePerDelivery", vpdStr)
     startTransition(async () => {
-      const res = await saveDailyRecord(fd)
+      const res = await onSave(fd)
       if (res?.error) setError(res.error)
       else onClose()
     })
@@ -199,7 +204,9 @@ function RecordForm({ initial, onClose, panel = "jadlog" }: { initial?: Partial<
 }
 
 // ── Linha da tabela ───────────────────────────────────────────
-function RecordRow({ record, panel = "jadlog" }: { record: DailyRecord; panel?: string }) {
+function RecordRow({
+  record, panel = "jadlog", readOnly = false, onSave = saveDailyRecord, onDelete = deleteDailyRecord,
+}: { record: DailyRecord; panel?: string; readOnly?: boolean; onSave?: SaveAction; onDelete?: DeleteAction }) {
   const [editOpen, setEditOpen]    = useState(false)
   const [pending, startTransition] = useTransition()
   const g = gross(record)
@@ -227,37 +234,42 @@ function RecordRow({ record, panel = "jadlog" }: { record: DailyRecord; panel?: 
           {formatCurrency(n)}
         </TableCell>
         <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)} aria-label="Editar">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              disabled={pending}
-              onClick={() => startTransition(() => deleteDailyRecord(record.id))}
-              aria-label="Excluir">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center justify-end gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => setEditOpen(true)} aria-label="Editar">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                disabled={pending}
+                onClick={() => startTransition(() => onDelete(record.id))}
+                aria-label="Excluir">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
         </TableCell>
       </TableRow>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar boleta — {fmtBR(record.date)}</DialogTitle>
-            <DialogDescription>Altere os dados do dia e salve.</DialogDescription>
-          </DialogHeader>
-          <RecordForm initial={record} onClose={() => setEditOpen(false)} panel={panel} />
-        </DialogContent>
-      </Dialog>
+      {!readOnly && (
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Editar boleta — {fmtBR(record.date)}</DialogTitle>
+              <DialogDescription>Altere os dados do dia e salve.</DialogDescription>
+            </DialogHeader>
+            <RecordForm initial={record} onClose={() => setEditOpen(false)} panel={panel} onSave={onSave} />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
 
 // ── Painel principal ──────────────────────────────────────────
 export function DailyRecordsPanel({
-  records, panel = "jadlog", year, month, onYearChange, onMonthChange,
+  records, panel = "jadlog", year, month, onYearChange, onMonthChange, readOnly = false,
+  onSave = saveDailyRecord, onDelete = deleteDailyRecord,
 }: {
   records: DailyRecord[]
   panel?: string
@@ -265,6 +277,9 @@ export function DailyRecordsPanel({
   month: number | null
   onYearChange: (year: number | null) => void
   onMonthChange: (month: number | null) => void
+  readOnly?: boolean
+  onSave?: SaveAction
+  onDelete?: DeleteAction
 }) {
   const [filter, setFilter] = useState<"all"|"filled"|"pending">("all")
 
@@ -296,18 +311,20 @@ export function DailyRecordsPanel({
     <Card>
       <CardContent className="p-4 md:p-6">
 
-        {/* Formulário fixo no topo */}
-        <div className="mb-6 rounded-lg border border-border bg-card">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Registrar entrega do dia
-            </span>
+        {/* Formulário fixo no topo — só para o próprio entregador */}
+        {!readOnly && (
+          <div className="mb-6 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Registrar entrega do dia
+              </span>
+            </div>
+            <div className="p-4">
+              <RecordForm onClose={() => {}} panel={panel} onSave={onSave} />
+            </div>
           </div>
-          <div className="p-4">
-            <RecordForm onClose={() => {}} panel={panel} />
-          </div>
-        </div>
+        )}
 
         {/* Histórico */}
         <div className="mb-3 flex items-center gap-2">
@@ -347,7 +364,7 @@ export function DailyRecordsPanel({
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <ClipboardList className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium">Nenhuma boleta registrada</p>
-            <p className="text-xs text-muted-foreground">Preencha o formulário acima para começar.</p>
+            {!readOnly && <p className="text-xs text-muted-foreground">Preencha o formulário acima para começar.</p>}
           </div>
         ) : (
           <div className="w-full rounded-lg border border-border">
@@ -383,7 +400,7 @@ export function DailyRecordsPanel({
                             {MONTHS[month]} {year}
                           </TableCell>
                         </TableRow>
-                        {mr.map(r => <RecordRow key={r.id} record={r} panel={panel} />)}
+                        {mr.map(r => <RecordRow key={r.id} record={r} panel={panel} readOnly={readOnly} onSave={onSave} onDelete={onDelete} />)}
                         <SummaryBar label={`Resumo ${MONTHS[month]} ${year}`} records={grouped[year][month]} />
                       </Fragment>
                     )

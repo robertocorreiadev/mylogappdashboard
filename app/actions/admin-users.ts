@@ -37,7 +37,7 @@ export async function updateUserAdmin(formData: FormData) {
   if (conflict) return { error: "Este e-mail já está em uso por outro usuário." }
 
   await db.update(users).set({ name, email }).where(eq(users.id, id))
-  revalidatePath("/usuarios")
+  revalidatePath("/gestao")
   return { success: true }
 }
 
@@ -51,7 +51,7 @@ export async function setUserPasswordAdmin(formData: FormData) {
   if (newPass !== confirmPass) return { error: "As senhas não conferem." }
 
   await db.update(users).set({ passwordHash: hashPassword(newPass) }).where(eq(users.id, id))
-  revalidatePath("/usuarios")
+  revalidatePath("/gestao")
   return { success: true }
 }
 
@@ -62,6 +62,6 @@ export async function deleteUserAdmin(formData: FormData) {
   if (id === admin.id) return { error: "Você não pode excluir sua própria conta por aqui." }
 
   await db.delete(users).where(eq(users.id, id))
-  revalidatePath("/usuarios")
+  revalidatePath("/gestao")
   return { success: true }
 }

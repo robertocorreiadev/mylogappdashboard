@@ -89,15 +89,59 @@ function PasswordForm() {
 }
 
 // ── Header principal ──────────────────────────────────────────
-export function DashboardHeader({ userName, userEmail, panelName, panel, isAdmin = false }: { userName: string; userEmail: string; panelName?: string; panel?: string; isAdmin?: boolean }) {
+export function DashboardHeader({
+  userName, userEmail, panelName, panel, isAdmin = false, viewerMode,
+}: {
+  userName: string
+  userEmail: string
+  panelName?: string
+  panel?: string
+  isAdmin?: boolean
+  /**
+   * Gestor visualizando o painel somente-leitura de um entregador (drill-down),
+   * ou o modo ADMIN MASTER (mode: "admin") — mesma UI, escrita habilitada,
+   * visual de alerta em vez de "somente leitura" pra deixar claro que ali há
+   * capacidade destrutiva ativa. Ver app/actions/admin-override.ts.
+   */
+  viewerMode?: { entregadorName: string; mode?: "gestor" | "admin"; backHref?: string }
+}) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const year = new Date().getFullYear()
+  const isAdminMode = viewerMode?.mode === "admin"
+  const backHref = viewerMode?.backHref ?? (isAdminMode ? "/gestao" : "/gestor")
 
   return (
     <>
+      {viewerMode && (
+        <div
+          className={`mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-2.5 ${
+            isAdminMode
+              ? "border-destructive/50 bg-destructive/10"
+              : "border-[var(--chart-2)]/40 bg-[var(--chart-2)]/10"
+          }`}
+        >
+          <p className="text-sm text-foreground">
+            {isAdminMode ? (
+              <>⚠ Modo ADMIN MASTER — editando <strong>{viewerMode.entregadorName}</strong></>
+            ) : (
+              <>Visualizando como gestor: <strong>{viewerMode.entregadorName}</strong> · somente leitura</>
+            )}
+          </p>
+          <a href={backHref}>
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5">
+              ← Voltar
+            </Button>
+          </a>
+        </div>
+      )}
+
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
+        {/* Logo — volta para a seleção de painel, sem depender do botão "voltar" do navegador */}
+        <a
+          href={viewerMode ? backHref : "/select"}
+          className="flex items-center gap-3 rounded-lg transition-opacity hover:opacity-80"
+          aria-label="Voltar à seleção de painel"
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Package className="h-5 w-5" aria-hidden="true" />
           </div>
@@ -105,7 +149,7 @@ export function DashboardHeader({ userName, userEmail, panelName, panel, isAdmin
             <p className="text-lg font-bold leading-tight text-primary">{panelName ?? "JADLOG"}</p>
             <p className="text-xs text-muted-foreground">Painel de Controle · {year}</p>
           </div>
-        </div>
+        </a>
 
         {/* Direita: usuário + engrenagem + sair */}
         <div className="flex items-center gap-2">
@@ -114,32 +158,36 @@ export function DashboardHeader({ userName, userEmail, panelName, panel, isAdmin
             <p className="text-sm font-semibold text-foreground">{userName}</p>
           </div>
 
-          {/* Engrenagem → abre modal de configurações */}
-          <Button
-            variant="ghost" size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Configurações da conta"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          {/* Engrenagem → abre modal de configurações (não faz sentido no drill-down do gestor) */}
+          {!viewerMode && (
+            <Button
+              variant="ghost" size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Configurações da conta"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
 
-          {/* Botão Gestão de usuários (somente admin) */}
-          {isAdmin && (
-            <a href="/usuarios">
+          {/* Botão Gestão (usuários + organizações, somente admin) */}
+          {isAdmin && !viewerMode && (
+            <a href="/gestao">
               <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
                 <User className="h-4 w-4" aria-hidden="true" />
-                Usuários
+                Gestão
               </Button>
             </a>
           )}
 
           {/* Botão Trocar painel */}
-          <a href="/select">
-            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-              ⇄ Trocar painel
-            </Button>
-          </a>
+          {!viewerMode && (
+            <a href="/select">
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                ⇄ Trocar painel
+              </Button>
+            </a>
+          )}
 
           {/* Botão Sair */}
           <form action={logout}>

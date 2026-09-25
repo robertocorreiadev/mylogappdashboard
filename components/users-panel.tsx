@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Pencil, KeyRound, Trash2, Users } from "lucide-react"
+import { Pencil, KeyRound, Trash2, Users, ShieldAlert } from "lucide-react"
 import { updateUserAdmin, setUserPasswordAdmin, deleteUserAdmin } from "@/app/actions/admin-users"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -130,6 +130,11 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
         <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(user.createdAt)}</TableCell>
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
+            <a href={`/gestor/entregadores/${user.id}`}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label="Editar como ADMIN MASTER" title="Editar dados operacionais como ADMIN MASTER">
+                <ShieldAlert className="h-4 w-4" />
+              </Button>
+            </a>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
               onClick={() => setEditOpen(true)} aria-label="Editar">
               <Pencil className="h-4 w-4" />

@@ -4,6 +4,10 @@ import { useState, useTransition } from "react"
 import { Plus, Trash2, Package } from "lucide-react"
 import type { Delivery } from "@/lib/db/schema"
 import { createDelivery, deleteDelivery, updateDeliveryStatus } from "@/app/actions/deliveries"
+
+type CreateAction = (formData: FormData) => Promise<void>
+type UpdateStatusAction = (id: number, status: string) => Promise<void>
+type DeleteAction = (id: number) => Promise<void>
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,13 +39,23 @@ const statusStyles: Record<string, string> = {
   cancelada: "bg-destructive/15 text-destructive",
 }
 
-export function DeliveriesPanel({ deliveries, panel = "jadlog" }: { deliveries: Delivery[]; panel?: string }) {
+export function DeliveriesPanel({
+  deliveries, panel = "jadlog", readOnly = false,
+  onCreate = createDelivery, onUpdateStatus = updateDeliveryStatus, onDelete = deleteDelivery,
+}: {
+  deliveries: Delivery[]
+  panel?: string
+  readOnly?: boolean
+  onCreate?: CreateAction
+  onUpdateStatus?: UpdateStatusAction
+  onDelete?: DeleteAction
+}) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await createDelivery(formData)
+      await onCreate(formData)
       setOpen(false)
     })
   }
@@ -51,77 +65,79 @@ export function DeliveriesPanel({ deliveries, panel = "jadlog" }: { deliveries: 
       <CardContent className="p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground">Entregas</h2>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger
-              render={
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Nova entrega
-                </Button>
-              }
-            />
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nova entrega</DialogTitle>
-                <DialogDescription>Cadastre um novo pacote para acompanhamento.</DialogDescription>
-              </DialogHeader>
-              <form action={handleSubmit} className="grid gap-4">
-      <input type="hidden" name="panel" value={panel} />
-                <div className="grid gap-2">
-                  <Label htmlFor="trackingCode">Código de rastreio</Label>
-                  <Input id="trackingCode" name="trackingCode" required placeholder="JL123456789BR" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="recipient">Destinatário</Label>
-                  <Input id="recipient" name="recipient" required placeholder="Nome do cliente" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="city">Cidade</Label>
-                    <Input id="city" name="city" placeholder="São Paulo" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="value">Valor (R$)</Label>
-                    <Input id="value" name="value" type="number" step="0.01" min="0" placeholder="0,00" />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input id="address" name="address" placeholder="Rua, número, bairro" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="deadline">Prazo</Label>
-                    <Input id="deadline" name="deadline" type="date" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select name="status" defaultValue="pendente">
-                      <SelectTrigger id="status">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending ? "Salvando..." : "Salvar entrega"}
+          {!readOnly && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger
+                render={
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Nova entrega
                   </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nova entrega</DialogTitle>
+                  <DialogDescription>Cadastre um novo pacote para acompanhamento.</DialogDescription>
+                </DialogHeader>
+                <form action={handleSubmit} className="grid gap-4">
+        <input type="hidden" name="panel" value={panel} />
+                  <div className="grid gap-2">
+                    <Label htmlFor="trackingCode">Código de rastreio</Label>
+                    <Input id="trackingCode" name="trackingCode" required placeholder="JL123456789BR" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="recipient">Destinatário</Label>
+                    <Input id="recipient" name="recipient" required placeholder="Nome do cliente" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="city">Cidade</Label>
+                      <Input id="city" name="city" placeholder="São Paulo" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="value">Valor (R$)</Label>
+                      <Input id="value" name="value" type="number" step="0.01" min="0" placeholder="0,00" />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input id="address" name="address" placeholder="Rua, número, bairro" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="deadline">Prazo</Label>
+                      <Input id="deadline" name="deadline" type="date" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select name="status" defaultValue="pendente">
+                        <SelectTrigger id="status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={isPending}>
+                      {isPending ? "Salvando..." : "Salvar entrega"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {deliveries.length === 0 ? (
-          <EmptyState />
+          <EmptyState readOnly={readOnly} />
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -133,12 +149,12 @@ export function DeliveriesPanel({ deliveries, panel = "jadlog" }: { deliveries: 
                   <TableHead>Prazo</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  {!readOnly && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {deliveries.map((d) => (
-                  <DeliveryRow key={d.id} delivery={d} />
+                  <DeliveryRow key={d.id} delivery={d} readOnly={readOnly} onUpdateStatus={onUpdateStatus} onDelete={onDelete} />
                 ))}
               </TableBody>
             </Table>
@@ -149,7 +165,9 @@ export function DeliveriesPanel({ deliveries, panel = "jadlog" }: { deliveries: 
   )
 }
 
-function DeliveryRow({ delivery }: { delivery: Delivery }) {
+function DeliveryRow({
+  delivery, readOnly = false, onUpdateStatus = updateDeliveryStatus, onDelete = deleteDelivery,
+}: { delivery: Delivery; readOnly?: boolean; onUpdateStatus?: UpdateStatusAction; onDelete?: DeleteAction }) {
   const [isPending, startTransition] = useTransition()
 
   return (
@@ -160,46 +178,54 @@ function DeliveryRow({ delivery }: { delivery: Delivery }) {
       <TableCell className="text-muted-foreground">{formatDate(delivery.deadline)}</TableCell>
       <TableCell>{formatCurrency(delivery.value)}</TableCell>
       <TableCell>
-        <Select
-          defaultValue={delivery.status}
-          onValueChange={(v) => startTransition(() => updateDeliveryStatus(delivery.id, String(v)))}
-        >
-          <SelectTrigger className="h-8 w-[140px] border-0 bg-transparent p-0 focus:ring-0">
-            <Badge className={`${statusStyles[delivery.status] ?? ""} border-0`}>
-              {statusLabel(delivery.status)}
-            </Badge>
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {readOnly ? (
+          <Badge className={`${statusStyles[delivery.status] ?? ""} border-0`}>
+            {statusLabel(delivery.status)}
+          </Badge>
+        ) : (
+          <Select
+            defaultValue={delivery.status}
+            onValueChange={(v) => startTransition(() => onUpdateStatus(delivery.id, String(v)))}
+          >
+            <SelectTrigger className="h-8 w-[140px] border-0 bg-transparent p-0 focus:ring-0">
+              <Badge className={`${statusStyles[delivery.status] ?? ""} border-0`}>
+                {statusLabel(delivery.status)}
+              </Badge>
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </TableCell>
-      <TableCell className="text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          disabled={isPending}
-          onClick={() => startTransition(() => deleteDelivery(delivery.id))}
-          aria-label="Excluir entrega"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </TableCell>
+      {!readOnly && (
+        <TableCell className="text-right">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            disabled={isPending}
+            onClick={() => startTransition(() => onDelete(delivery.id))}
+            aria-label="Excluir entrega"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </TableCell>
+      )}
     </TableRow>
   )
 }
 
-function EmptyState() {
+function EmptyState({ readOnly = false }: { readOnly?: boolean }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
       <Package className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
       <p className="text-sm font-medium text-foreground">Nenhuma entrega cadastrada</p>
-      <p className="text-xs text-muted-foreground">Clique em &quot;Nova entrega&quot; para começar.</p>
+      {!readOnly && <p className="text-xs text-muted-foreground">Clique em &quot;Nova entrega&quot; para começar.</p>}
     </div>
   )
 }

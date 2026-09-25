@@ -1,12 +1,14 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { users } from "@/lib/db/schema"
+import { users, memberships } from "@/lib/db/schema"
 import { verifyPassword, hashPassword, isLegacyHash, isAdminEmail } from "@/lib/auth"
 import { clearUserId, getUserId, setUserId } from "@/lib/session"
 import { isLocked, registerFailedAttempt, clearAttempts } from "@/lib/rate-limit"
+import { createSoloOrgForNewUser } from "@/lib/db/onboarding"
+import { acceptInvite } from "@/lib/invites"
 
 export async function requireUser() {
   const userId = await getUserId()
@@ -21,6 +23,51 @@ export async function requireAdmin() {
   const user = await requireUser()
   if (!isAdminEmail(user.email)) throw new Error("Acesso restrito.")
   return user
+}
+
+// ── Organização / papel (gestor | entregador) ───────────────────
+// Um usuário pode ter no máximo uma membership "active" POR PAPEL — pode
+// acumular 'gestor' + 'entregador' simultaneamente (dual-role), mas nunca
+// duas do mesmo papel. Por isso requireGestor()/requireEntregador() buscam
+// especificamente o papel pedido, em vez de assumir "a" membership do usuário.
+export type MembershipContext = {
+  user: Awaited<ReturnType<typeof requireUser>>
+  organizationId: number
+  role: "gestor" | "entregador"
+  membershipId: number
+}
+
+export async function requireMembership(role?: "gestor" | "entregador"): Promise<MembershipContext> {
+  const user = await requireUser()
+  const conditions = [eq(memberships.userId, user.id), eq(memberships.status, "active")]
+  if (role) conditions.push(eq(memberships.role, role))
+  const [membership] = await db.select().from(memberships).where(and(...conditions)).limit(1)
+  if (!membership) throw new Error(role ? `Sem acesso como ${role}.` : "Nenhuma organização vinculada.")
+  return {
+    user,
+    organizationId: membership.organizationId,
+    role: membership.role as "gestor" | "entregador",
+    membershipId: membership.id,
+  }
+}
+
+export async function requireGestor() {
+  return requireMembership("gestor")
+}
+
+export async function requireEntregador() {
+  return requireMembership("entregador")
+}
+
+// Não lança erro — usado por /select para decidir quais opções mostrar
+// (ex.: conta dual-role vê o seletor gestor/entregador; conta só-entregador
+// nunca vê nada relacionado a gestor).
+export async function getActiveRoles(): Promise<Array<"gestor" | "entregador">> {
+  const userId = await getUserId()
+  if (!userId) return []
+  const rows = await db.select({ role: memberships.role }).from(memberships)
+    .where(and(eq(memberships.userId, userId), eq(memberships.status, "active")))
+  return rows.map((r) => r.role as "gestor" | "entregador")
 }
 
 export async function login(formData: FormData) {
@@ -45,6 +92,11 @@ export async function login(formData: FormData) {
     await db.update(users).set({ passwordHash: hashPassword(password) }).where(eq(users.id, user.id))
   }
   await setUserId(user.id)
+  // Login a partir de /convite/[token]: aceite best-effort — se falhar (ex.:
+  // já é entregador de outra org), o usuário simplesmente segue logado sem
+  // o novo vínculo, sem bloquear o login em si.
+  const inviteToken = formData.get("inviteToken")?.toString().trim() || null
+  if (inviteToken) await acceptInvite(inviteToken, user.id)
   redirect("/select")
 }
 
@@ -60,11 +112,26 @@ export async function register(formData: FormData) {
   const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (existing) return { error: "Este e-mail já está cadastrado." }
   const [created] = await db.insert(users).values({ name, email, passwordHash: hashPassword(password) }).returning()
+
+  // Cadastro via /convite/[token]: entra como entregador da org do convite
+  // em vez de ganhar organização solo. Se o convite não puder ser aceito
+  // (ex.: expirou entre o carregamento da página e o submit), cai no
+  // fallback solo para a conta não ficar sem nenhuma organização.
+  const inviteToken = formData.get("inviteToken")?.toString().trim() || null
+  const joinedViaInvite = inviteToken ? (await acceptInvite(inviteToken, created.id)).success : false
+  if (!joinedViaInvite) await createSoloOrgForNewUser(created.id, created.name)
+
   await setUserId(created.id)
   redirect("/select")
 }
 
-export async function loginWithGoogle(googleId: string, email: string, name?: string | null, picture?: string | null) {
+export async function loginWithGoogle(
+  googleId: string,
+  email: string,
+  name?: string | null,
+  picture?: string | null,
+  inviteToken?: string | null,
+) {
   const normalizedEmail = email.trim().toLowerCase()
   const [byGoogle] = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1)
   const [byEmail]  = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
@@ -76,11 +143,14 @@ export async function loginWithGoogle(googleId: string, email: string, name?: st
       avatarUrl: existing.avatarUrl ?? (picture ?? undefined),
     }).where(eq(users.id, existing.id))
     await setUserId(existing.id)
+    if (inviteToken) await acceptInvite(inviteToken, existing.id)
     return
   }
   const [created] = await db.insert(users).values({
     name: name ?? email.split("@")[0], email: normalizedEmail, googleId, avatarUrl: picture ?? undefined,
   }).returning()
+  const joinedViaInvite = inviteToken ? (await acceptInvite(inviteToken, created.id)).success : false
+  if (!joinedViaInvite) await createSoloOrgForNewUser(created.id, created.name)
   await setUserId(created.id)
 }
 

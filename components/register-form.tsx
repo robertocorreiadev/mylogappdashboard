@@ -7,22 +7,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function RegisterForm() {
+export function RegisterForm({ inviteToken }: { inviteToken?: string } = {}) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function handleSubmit(fd: FormData) {
     setError(null)
+    if (inviteToken) fd.set("inviteToken", inviteToken)
     startTransition(async () => {
       const res = await register(fd)
       if (res?.error) setError(res.error)
     })
   }
 
+  const googleHref = inviteToken ? `/api/auth/google?invite=${encodeURIComponent(inviteToken)}` : "/api/auth/google"
+
   return (
     <div className="flex flex-col gap-4">
       <a
-        href="/api/auth/google"
+        href={googleHref}
         className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-secondary px-4 py-2.5 text-sm font-medium transition-colors hover:border-primary hover:bg-accent"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24">

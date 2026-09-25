@@ -3,6 +3,7 @@ import { requireAdmin } from "@/app/actions/auth"
 import { getAllUsers } from "@/app/actions/admin-users"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { UsersPanel } from "@/components/users-panel"
+import { CreateOrganizationPanel } from "@/components/create-organization-panel"
 
 export default async function UsuariosPage() {
   let admin
@@ -21,6 +22,9 @@ export default async function UsuariosPage() {
         userEmail={admin.email}
         panelName="Gestão de Usuários"
       />
+      <div className="mb-4 flex justify-end">
+        <CreateOrganizationPanel users={allUsers} />
+      </div>
       <UsersPanel users={allUsers} currentUserId={admin.id} />
     </main>
   )

@@ -42,3 +42,12 @@ export const STATUS_OPTIONS = [
 export function statusLabel(value: string) {
   return STATUS_OPTIONS.find((s) => s.value === value)?.label ?? value
 }
+
+// Nomes fixos por enquanto (mesmos hardcoded em app/dashboard e app/panel2).
+// Quando painéis customizáveis por organização existirem, isso vira lookup
+// dinâmico em vez de mapa fixo.
+export const PANEL_LABELS: Record<string, string> = { jadlog: "JADLOG", panel2: "Painel 2" }
+
+export function panelLabel(panel: string) {
+  return PANEL_LABELS[panel] ?? panel
+}

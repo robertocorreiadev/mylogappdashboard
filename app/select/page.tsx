@@ -1,10 +1,19 @@
 import { redirect } from "next/navigation"
 import { getUserId } from "@/lib/session"
-import { Package, LayoutDashboard } from "lucide-react"
+import { getActiveRoles } from "@/app/actions/auth"
+import { Package, LayoutDashboard, Users } from "lucide-react"
 
 export default async function SelectPage() {
   const userId = await getUserId()
   if (!userId) redirect("/")
+
+  const roles = await getActiveRoles()
+  const hasGestor      = roles.includes("gestor")
+  const hasEntregador  = roles.includes("entregador")
+
+  // Conta só-gestor (sem papel de entregador): não faz sentido oferecer o
+  // seletor jadlog/panel2, que é exclusivo de quem lança boletas.
+  if (hasGestor && !hasEntregador) redirect("/gestor")
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-5">
@@ -49,6 +58,23 @@ export default async function SelectPage() {
             </div>
             <span className="ml-auto text-xl text-[#4f9dff] opacity-0 transition-opacity group-hover:opacity-100">→</span>
           </a>
+
+          {/* Botão Painel do Gestor — só aparece para quem também tem papel de gestor (dual-role) */}
+          {hasGestor && (
+            <a
+              href="/gestor"
+              className="group flex items-center gap-5 rounded-xl border-2 border-[var(--chart-2)]/40 bg-card p-6 shadow-lg transition-all hover:border-[var(--chart-2)] hover:bg-[var(--chart-2)]/5"
+            >
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--chart-2)] text-white shadow">
+                <Users className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--chart-2)]">Painel do Gestor</p>
+                <p className="text-sm text-muted-foreground">Visão da sua organização</p>
+              </div>
+              <span className="ml-auto text-xl text-[var(--chart-2)] opacity-0 transition-opacity group-hover:opacity-100">→</span>
+            </a>
+          )}
         </div>
       </div>
     </main>
