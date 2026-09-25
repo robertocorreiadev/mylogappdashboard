@@ -17,11 +17,20 @@ export default async function DashboardPage() {
     redirect("/")
   }
 
-  const [deliveries, transactions, dailyRecords] = await Promise.all([
-    getDeliveries(PANEL),
-    getTransactions(PANEL),
-    getDailyRecords(PANEL),
-  ])
+  // getDeliveries/getTransactions/getDailyRecords exigem requireEntregador()
+  // — uma conta só-gestor (sem membership de entregador) cairia aqui com um
+  // erro não tratado em vez do redirect gracioso; /select decide pra onde
+  // essa conta deve ir de verdade (ex.: /gestor).
+  let deliveries, transactions, dailyRecords
+  try {
+    ;[deliveries, transactions, dailyRecords] = await Promise.all([
+      getDeliveries(PANEL),
+      getTransactions(PANEL),
+      getDailyRecords(PANEL),
+    ])
+  } catch {
+    redirect("/select")
+  }
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">

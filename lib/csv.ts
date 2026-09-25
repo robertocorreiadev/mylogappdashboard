@@ -12,8 +12,19 @@ type Column<T> = {
   label: string
 }
 
+// Campos livres (destinatário, descrição, endereço...) são digitados por
+// entregadores e lidos por gestores em outra conta — sem isso, um campo tipo
+// `=HYPERLINK("http://evil","x")` vira fórmula executada quando o CSV abre
+// no Excel/Sheets (injeção de fórmula entre organizações). "-" só é
+// neutralizado quando NÃO seguido de dígito, pra não estragar valores
+// monetários negativos legítimos (ex.: faturamento líquido no vermelho).
+const DANGEROUS_LEADING = /^[=+@]|^-(?!\d)|^[\t\r]/
+
 function escapeCsvField(value: unknown): string {
-  const str = value === null || value === undefined ? "" : String(value)
+  let str = value === null || value === undefined ? "" : String(value)
+  if (DANGEROUS_LEADING.test(str)) {
+    str = `'${str}`
+  }
   if (/["\n;]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`
   }

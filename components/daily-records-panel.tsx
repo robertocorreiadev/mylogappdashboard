@@ -13,7 +13,7 @@ import {
   DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency, MONTHS } from "@/lib/format"
+import { formatCurrency, MONTHS, filterByPeriod } from "@/lib/format"
 import { toCsv, downloadCsv } from "@/lib/csv"
 
 type SaveAction = (formData: FormData) => Promise<{ error?: string; success?: boolean }>
@@ -311,13 +311,7 @@ export function DailyRecordsPanel({
   // Exporta respeitando o filtro de ano/mês ativo (não o filtro rápido
   // "registrados/pendentes" — quem exporta espera o período inteiro).
   function handleExport() {
-    const rows = records.filter((r) => {
-      if (year === null && month === null) return true
-      const d = new Date(r.date + "T00:00:00")
-      if (year !== null && d.getFullYear() !== year) return false
-      if (month !== null && d.getMonth() !== month) return false
-      return true
-    })
+    const rows = filterByPeriod(records, year, month)
     const csv = toCsv(rows, [
       { key: "date", label: "Data" },
       { key: "delivered", label: "Entregas Realizadas" },

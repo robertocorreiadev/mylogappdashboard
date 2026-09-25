@@ -35,6 +35,11 @@ export async function GET(request: NextRequest) {
       path: "/",
       maxAge: 60 * 10,
     })
+  } else {
+    // Limpa qualquer cookie de convite de um fluxo anterior abandonado —
+    // sem isso, um login Google não relacionado dentro da mesma janela de
+    // 10min podia herdar e aceitar um convite que o usuário nunca pediu.
+    response.cookies.delete(INVITE_COOKIE)
   }
   return response
 }

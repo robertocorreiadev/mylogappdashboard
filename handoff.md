@@ -1,9 +1,16 @@
 # Handoff — MyLog Multi-Tenant
 
-Última atualização: 2026-09-25. Se esta sessão for interrompida, leia este
-arquivo primeiro, depois `TODO.md` (histórico detalhado por fase) e o plano
-original em
+Última atualização: 2026-09-25 (pós-revisão de código). Se esta sessão for
+interrompida, leia este arquivo primeiro, depois `TODO.md` (histórico
+detalhado por fase e da revisão) e o plano original em
 `C:\Users\IOT DEXTER\.claude\plans\vamos-arquitetar-um-sistema-mutable-quail.md`.
+
+`/code-review 7fa3ffe..HEAD high` rodou sobre tudo desta sessão: 5 achados
+reais corrigidos (2 regressões que quebrariam produção — ver "Revisão de
+código" em `TODO.md` pro detalhe completo de cada um), 4 de
+eficiência/redundância documentados como débito técnico deliberado (não
+corrigidos — mexeriam no contrato de `requireGestor()`/`requireMembership`
+compartilhado, melhor como mudança própria e revisada).
 
 ## Estado do projeto
 

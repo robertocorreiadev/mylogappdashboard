@@ -31,10 +31,16 @@ export async function saveDailyRecord(formData: FormData) {
       { organizationId, userId: user.id, id: existing.id },
       { valuePerDelivery, delivered, scheduled, occurrences, expenses, updatedAt: new Date() },
     )
-    await recordAudit({
-      organizationId, actorUserId: user.id, entityType: "daily_record", entityId: existing.id,
-      action: "update", before: existing, after: updated,
-    })
+    // updated pode vir undefined se o registro saiu do escopo entre o
+    // findDailyRecord acima e este update (corrida rara) — mesma guarda que
+    // os outros write paths (delete daqui, update/delete de deliveries e
+    // transactions) já usam antes de auditar.
+    if (updated) {
+      await recordAudit({
+        organizationId, actorUserId: user.id, entityType: "daily_record", entityId: existing.id,
+        action: "update", before: existing, after: updated,
+      })
+    }
   } else {
     const created = await insertDailyRecord({
       userId: user.id, organizationId, panel, date, valuePerDelivery, delivered, scheduled, occurrences, expenses,

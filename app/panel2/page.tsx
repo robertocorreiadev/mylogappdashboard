@@ -17,11 +17,17 @@ export default async function Panel2Page() {
     redirect("/")
   }
 
-  const [deliveries, transactions, dailyRecords] = await Promise.all([
-    getDeliveries(PANEL),
-    getTransactions(PANEL),
-    getDailyRecords(PANEL),
-  ])
+  // Ver comentário equivalente em app/dashboard/page.tsx.
+  let deliveries, transactions, dailyRecords
+  try {
+    ;[deliveries, transactions, dailyRecords] = await Promise.all([
+      getDeliveries(PANEL),
+      getTransactions(PANEL),
+      getDailyRecords(PANEL),
+    ])
+  } catch {
+    redirect("/select")
+  }
 
   return (
     <main

@@ -197,6 +197,67 @@ histórico de auditoria das edições dos entregadores.
   discussão de permissões seguras vs. add-ons pagos no histórico da
   sessão de 2026-09-24 antes de planejar isso em detalhe.
 
+## Revisão de código (2026-09-25) — `/code-review 7fa3ffe..HEAD high`
+Revisão de todos os commits desta sessão (multi-tenant + ADMIN MASTER +
+CSV). 5 achados corrigidos, 4 documentados como débito técnico conhecido
+(não corrigidos — ver justificativa abaixo).
+
+### Corrigidos
+- [x] `app/dashboard/page.tsx`/`app/panel2/page.tsx`: `getDeliveries`/
+      `getTransactions`/`getDailyRecords` passaram a exigir
+      `requireEntregador()` (Fase 2), mas o `Promise.all` não estava
+      dentro do `try/catch` — uma conta só-gestor (sem membership de
+      entregador) caindo aqui batia em erro não tratado (500) em vez do
+      redirect gracioso. Agora o `Promise.all` também é `try/catch`,
+      redirecionando pra `/select`.
+- [x] `app/actions/admin-users.ts` `deleteUserAdmin`: `db.delete(users)`
+      sem `try/catch`, mas o schema novo tem FKs `NOT NULL` pra
+      `users.id` sem `ON DELETE CASCADE` (`audit_logs.actor_user_id`,
+      `organizations.owner_user_id`) — de propósito, pra não apagar
+      auditoria de outras pessoas em cascata. Isso quebrava a exclusão de
+      quase qualquer usuário real (qualquer um que já tenha salvo um
+      registro ganha uma linha em `audit_logs`) com um 500 em vez do
+      padrão `{error}` esperado pela UI. Agora captura o erro Postgres
+      `23503` (foreign_key_violation) e devolve mensagem amigável.
+- [x] `app/api/auth/google/route.ts`: o cookie `pending_invite_token` era
+      setado quando `?invite=` estava presente, mas nunca limpo quando
+      ausente — um cookie de um fluxo de convite abandonado podia
+      "pegar carona" num login Google não relacionado dentro da mesma
+      janela de 10min, inscrevendo a conta como entregador de uma
+      organização sem consentimento. Agora limpa o cookie explicitamente
+      quando não há `?invite=`.
+- [x] `lib/csv.ts`: `escapeCsvField` não neutralizava prefixos perigosos
+      (`=`, `+`, `@`, tab) — um campo digitado por um entregador (ex.
+      `recipient`) com `=HYPERLINK(...)` vira fórmula executada quando o
+      gestor abre o CSV exportado no Excel (injeção de fórmula entre
+      organizações). Corrigido com prefixo de `'` nesses casos — `-` só é
+      neutralizado quando NÃO seguido de dígito, pra preservar valores
+      monetários negativos legítimos (ex. faturamento líquido no
+      vermelho).
+- [x] `app/actions/daily-records.ts` `saveDailyRecord`: no branch de
+      update, `recordAudit` era chamado com `after: updated` sem checar
+      se `updated` veio truthy (diferente de todo write path irmão, que
+      sempre guarda o retorno antes de auditar). Corrigido com o mesmo
+      guard.
+- [x] `components/daily-records-panel.tsx` `handleExport`: reimplementava
+      o filtro de ano/mês em vez de reaproveitar `filterByPeriod` de
+      `lib/format.ts` (já usado de forma idêntica em `dashboard-tabs.tsx`).
+      Trocado pela função compartilhada.
+
+### Documentado, não corrigido (débito técnico conhecido)
+Quatro achados de eficiência/redundância (múltiplas chamadas de
+`requireUser()`/`requireGestor()` re-derivando o mesmo contexto de auth
+por request em `app/gestor/page.tsx`, `app/gestor/entregadores/[userId]/
+page.tsx` e `app/actions/admin-override.ts`; verificação `isAdminEmail()`
+duplicada em 3+ lugares sem um helper único de "modo de visualização").
+São issues reais de performance/manutenibilidade, não bugs de
+corretude — cada um custa só 1-2 SELECTs extras rápidos por carregamento
+de página. Corrigir direito exigiria mudar o contrato dos helpers
+compartilhados (`requireGestor`/`requireMembership` em
+`app/actions/auth.ts`) pra aceitar um usuário já resolvido, o que é
+melhor feito como uma mudança deliberada e revisada à parte do que
+espremido no fim desta revisão.
+
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via
   SQL manual no Neon SQL Editor (ver `migrate-unique-fix.sql` como exemplo).
