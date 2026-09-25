@@ -170,12 +170,23 @@ histórico de auditoria das edições dos entregadores.
       test` (34/34) e `tsc --noEmit` limpos (só o artefato stale conhecido
       de `.next/types/validator.ts`).
 
-## Ideias registradas (não implementadas ainda)
-- **Exportação CSV/PDF** dos dados de performance, para entregador e
-  gestor. CSV é barato (serializar o que já buscamos) e ficaria grátis
-  pros dois papéis — é portabilidade de dado, não feature paga. PDF
-  (relatório formatado) tem mais cara de ferramenta de negócio — bom
-  candidato a add-on pago do lado do gestor.
+## Concluído — exportação CSV
+- [x] **Exportação CSV** dos dados de performance. `lib/csv.ts` (novo):
+      `toCsv()` (genérico, delimitador `;` de propósito — Excel pt-BR
+      espera `;` porque a vírgula é o separador decimal nesse locale) +
+      `downloadCsv()` (Blob + BOM UTF-8, senão acentuação quebra no Excel
+      no Windows). Botão "Exportar CSV" adicionado direto em
+      `components/daily-records-panel.tsx` (respeita o filtro de ano/mês
+      ativo), `deliveries-panel.tsx` e `finance-panel.tsx` (idem, usa o
+      array já filtrado) — como esses 3 componentes já são compartilhados
+      entre o dashboard do entregador (modo escrita) e o drill-down do
+      gestor (modo `readOnly`), a exportação cobre os dois papéis de graça,
+      sem código duplicado. Testado manualmente: exportei boletas e
+      lançamentos financeiros reais, conferi CSV com cabeçalho em
+      português, `;` como delimitador e acentuação (Ocorrências) intacta.
+      PDF (relatório formatado) segue como ideia não implementada — mais
+      trabalho (biblioteca de renderização) e mais cara de add-on pago do
+      gestor do que de portabilidade de dado grátis.
 - **Painéis customizáveis por organização** (pivot maior, discutido mas
   ainda não planejado em detalhe): hoje `panel` é uma string fixa
   ("jadlog"/"panel2") hardcoded em `app/dashboard/page.tsx`/

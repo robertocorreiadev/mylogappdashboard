@@ -1,13 +1,9 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet } from "lucide-react"
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
 import { createTransaction, deleteTransaction, updateTransaction } from "@/app/actions/transactions"
-
-type CreateAction = (formData: FormData) => Promise<void>
-type UpdateAction = (formData: FormData) => Promise<void>
-type DeleteAction = (id: number) => Promise<void>
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +17,11 @@ import {
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDate, MONTHS } from "@/lib/format"
+import { toCsv, downloadCsv } from "@/lib/csv"
+
+type CreateAction = (formData: FormData) => Promise<void>
+type UpdateAction = (formData: FormData) => Promise<void>
+type DeleteAction = (id: number) => Promise<void>
 
 function TransactionForm({
   initial, onClose, panel = "jadlog", onCreate = createTransaction, onUpdate = updateTransaction,
@@ -183,6 +184,17 @@ export function FinancePanel({
   const despesa = filtered.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
   const saldo   = receita - despesa
 
+  function handleExport() {
+    const csv = toCsv(filtered, [
+      { key: "date", label: "Data" },
+      { key: "description", label: "Descrição" },
+      { key: (t) => t.category ?? "", label: "Categoria" },
+      { key: (t) => (t.type === "receita" ? "Receita" : "Despesa"), label: "Tipo" },
+      { key: (t) => Number(t.amount).toFixed(2), label: "Valor" },
+    ])
+    downloadCsv(`financeiro-${panel}-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+  }
+
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
@@ -224,20 +236,27 @@ export function FinancePanel({
               {monthsForSelect.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
             </select>
           </div>
-          {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button size="sm" className="gap-2" />}>
-                <Plus className="h-4 w-4" />Novo lançamento
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Novo lançamento</DialogTitle>
-                  <DialogDescription>Registre uma receita ou despesa.</DialogDescription>
-                </DialogHeader>
-                <TransactionForm onClose={() => setOpen(false)} panel={panel} onCreate={onCreate} onUpdate={onUpdate} />
-              </DialogContent>
-            </Dialog>
-          )}
+          <div className="flex items-center gap-2">
+            {filtered.length > 0 && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+                <Download className="h-3.5 w-3.5" /> Exportar CSV
+              </Button>
+            )}
+            {!readOnly && (
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger render={<Button size="sm" className="gap-2" />}>
+                  <Plus className="h-4 w-4" />Novo lançamento
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo lançamento</DialogTitle>
+                    <DialogDescription>Registre uma receita ou despesa.</DialogDescription>
+                  </DialogHeader>
+                  <TransactionForm onClose={() => setOpen(false)} panel={panel} onCreate={onCreate} onUpdate={onUpdate} />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
 
         {filtered.length === 0 ? (

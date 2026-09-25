@@ -1,12 +1,9 @@
 "use client"
 
 import { Fragment, useState, useTransition, useMemo } from "react"
-import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt } from "lucide-react"
+import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
-
-type SaveAction = (formData: FormData) => Promise<{ error?: string; success?: boolean }>
-type DeleteAction = (id: number) => Promise<void>
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +14,10 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, MONTHS } from "@/lib/format"
+import { toCsv, downloadCsv } from "@/lib/csv"
+
+type SaveAction = (formData: FormData) => Promise<{ error?: string; success?: boolean }>
+type DeleteAction = (id: number) => Promise<void>
 
 const DAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
 
@@ -307,6 +308,29 @@ export function DailyRecordsPanel({
     return out
   }, [grouped, years])
 
+  // Exporta respeitando o filtro de ano/mês ativo (não o filtro rápido
+  // "registrados/pendentes" — quem exporta espera o período inteiro).
+  function handleExport() {
+    const rows = records.filter((r) => {
+      if (year === null && month === null) return true
+      const d = new Date(r.date + "T00:00:00")
+      if (year !== null && d.getFullYear() !== year) return false
+      if (month !== null && d.getMonth() !== month) return false
+      return true
+    })
+    const csv = toCsv(rows, [
+      { key: "date", label: "Data" },
+      { key: "delivered", label: "Entregas Realizadas" },
+      { key: "scheduled", label: "Agendadas" },
+      { key: "occurrences", label: "Ocorrências" },
+      { key: (r) => Number(r.valuePerDelivery).toFixed(2), label: "Valor por Entrega" },
+      { key: (r) => gross(r).toFixed(2), label: "Faturamento Bruto" },
+      { key: (r) => Number(r.expenses).toFixed(2), label: "Despesas" },
+      { key: (r) => net(r).toFixed(2), label: "Faturamento Líquido" },
+    ])
+    downloadCsv(`boletas-${panel}-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+  }
+
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
@@ -327,11 +351,18 @@ export function DailyRecordsPanel({
         )}
 
         {/* Histórico */}
-        <div className="mb-3 flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Histórico{year !== null ? ` ${year}` : ""}
-          </h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Histórico{year !== null ? ` ${year}` : ""}
+            </h2>
+          </div>
+          {records.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </Button>
+          )}
         </div>
 
         {/* Filtros */}

@@ -117,12 +117,22 @@ servidor sempre respondendo rápido. Quando isso acontecer, use
   nenhum arquivo versionado — estão em `.env` (gitignored) e em
   `..\MY LOG KEYS.txt` (fora do repo git).
 
+## Concluído — exportação CSV (2026-09-25)
+`lib/csv.ts` (`toCsv`/`downloadCsv`) + botão "Exportar CSV" em
+`daily-records-panel.tsx`/`deliveries-panel.tsx`/`finance-panel.tsx` —
+cobre entregador e gestor de graça, já que esses componentes já são
+compartilhados entre os dois modos. PDF fica como ideia futura (add-on
+pago), não implementado.
+
 ## Ideias registradas, não implementadas (ver TODO.md para detalhe)
-- Exportação CSV/PDF de performance (CSV grátis pros dois papéis, PDF como
-  add-on pago do gestor).
+- **PDF** (relatório formatado) — candidato a add-on pago do gestor, mais
+  trabalho que o CSV (biblioteca de renderização).
 - Painéis customizáveis por organização (pivot maior — nome próprio por
   painel, 2 grátis + adicionais pagos, rota dinâmica `/painel/[slug]`
   substituindo `/dashboard`+`/panel2` hardcoded). Ainda não planejado em
   detalhe — só discutido.
-- Rate limit nas tentativas de aceite de convite (token já é alta entropia,
-  então é reforço, não proteção essencial).
+- Rate limit nas tentativas de aceite de convite: **avaliado e descartado**
+  — o token tem 256 bits de entropia (`crypto.randomBytes(32)`), então
+  força bruta já é inviável sem rate limit; expiração/revogação (já
+  implementados) resolvem o problema real (ciclo de vida do link), que é
+  diferente do que rate limit resolveria.
