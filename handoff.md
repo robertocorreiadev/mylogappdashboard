@@ -1,16 +1,46 @@
 # Handoff — MyLog Multi-Tenant
 
-Última atualização: 2026-09-25 (pós-revisão de código). Se esta sessão for
-interrompida, leia este arquivo primeiro, depois `TODO.md` (histórico
-detalhado por fase e da revisão) e o plano original em
+Última atualização: 2026-09-25. Se esta sessão for interrompida, leia este
+arquivo primeiro, depois `TODO.md` (histórico detalhado por fase e da
+revisão) e o plano original em
 `C:\Users\IOT DEXTER\.claude\plans\vamos-arquitetar-um-sistema-mutable-quail.md`.
 
-`/code-review 7fa3ffe..HEAD high` rodou sobre tudo desta sessão: 5 achados
-reais corrigidos (2 regressões que quebrariam produção — ver "Revisão de
-código" em `TODO.md` pro detalhe completo de cada um), 4 de
-eficiência/redundância documentados como débito técnico deliberado (não
-corrigidos — mexeriam no contrato de `requireGestor()`/`requireMembership`
-compartilhado, melhor como mudança própria e revisada).
+## 🎯 Próxima tarefa principal (definida pelo usuário em 2026-09-25)
+
+**Consolidar o contexto de auth repetido** — os 4 achados de
+eficiência/redundância que a revisão de código encontrou e que ficaram
+deliberadamente sem correção nesta sessão (ver "Revisão de código" em
+`TODO.md` pro relatório completo). Nenhum é vulnerabilidade hoje — são
+queries redundantes ao banco por request + um ponto de manutenção frágil:
+
+1. `app/gestor/page.tsx`: `getOrgOverview()`, `listPendingInvites()` e
+   `listAcceptedInvites()` cada um chama `requireGestor()`
+   independentemente dentro do mesmo `Promise.all` → 6 SELECTs (3x user +
+   3x membership) em vez de ~2 por carregamento da página.
+2. `app/gestor/entregadores/[userId]/page.tsx`: chama `requireUser()`
+   (pra checar `isAdminEmail`) e depois `requireGestor()` no branch
+   não-admin, que internamente chama `requireUser()` de novo — SELECT de
+   `users` duplicado.
+3. `app/actions/admin-override.ts` `adminGetTargetMemberData()`: duas
+   queries sequenciais (membership+user, depois organizations) que dá
+   pra resolver num JOIN só.
+4. A checagem "isso é ADMIN MASTER?" (`isAdminEmail(user.email)`) é
+   chamada ad-hoc em `app/gestor/entregadores/[userId]/page.tsx` e
+   `app/gestor/auditoria/page.tsx` em vez de um helper único tipo
+   `resolveViewerMode()` — não é lógica duplicada (ambos delegam pra
+   `isAdminEmail()` em `lib/auth.ts`, fonte única), mas é um padrão
+   frágil: se o conceito de "admin" mudar no futuro (múltiplos admins,
+   flag no banco), tem 3+ lugares pra lembrar de atualizar em vez de um.
+
+**Abordagem sugerida** (discutida com o usuário, não é obrigatória):
+estender `requireMembership()`/`requireGestor()` em `app/actions/auth.ts`
+pra aceitar opcionalmente um usuário já resolvido (evita o SELECT
+duplicado), e criar um helper único de "modo de visualização" que resolve
+gestor-normal vs. admin-master de uma vez, chamado no topo de cada página
+do `/gestor/*`. É uma mudança pequena e contida, mas toca o contrato de
+helpers compartilhados usados em todo o app — testar com `tsc`/`npm test`
++ smoke test manual (dashboard normal, `/gestor`, drill-down como gestor
+E como admin) antes de considerar concluído.
 
 ## Estado do projeto
 
@@ -23,20 +53,15 @@ cada item). Produção (Neon) já rodou os scripts de migração
 `migrate-multitenant-002-backfill-legacy-org.sql` — não precisa rodar de
 novo.
 
-**Commit + push já feitos**: `1f9ec5c` em `main`, empurrado pra
-`origin/main` (`7fa3ffe..1f9ec5c`) em 2026-09-25. Não repita — confira
-`git log --oneline -3` antes de commitar de novo.
-
-Próximos passos em aberto (não implementados, ver seção "Ideias
-registradas" no fim deste arquivo e `TODO.md`): exportação CSV/PDF,
-painéis customizáveis por organização, rate limit no aceite de convite.
+**Commit + push já feitos** (mais recente primeiro): `1683934` (correções
+da revisão de código) → `496662b` (exportação CSV) → `2b5cf56`/`1f9ec5c`
+(multi-tenant + ADMIN MASTER), todos em `origin/main`. Confira
+`git log --oneline -5` antes de commitar de novo — se a "Próxima tarefa
+principal" acima ainda não tem commit correspondente, é ela que falta
+fazer.
 
 O texto abaixo é o histórico da decisão de arquitetura do ADMIN MASTER —
-não precisa reler se `git log --oneline -3` já mostra o commit `1f9ec5c`
-(ou um commit posterior). Se a sessão foi interrompida ANTES desse commit
-existir, rode `git status`: se as mudanças descritas abaixo ainda estiverem
-no working tree sem commit, prossiga direto pro commit + push (permissão já
-concedida pelo usuário) em vez de reimplementar do zero.
+contexto de fundo, não precisa reler pra começar a próxima tarefa.
 
 ## ADMIN MASTER — concluído (histórico da decisão)
 
