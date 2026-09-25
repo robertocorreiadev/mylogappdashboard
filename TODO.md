@@ -1,10 +1,28 @@
 # TODO - JADLOG Dashboard
 
-Status em 2026-08-24. Histórico de etapas antigas (migração do sistema
-`PROFILES` para auth por usuário, indicadores modulares, boleta diária) foi
-concluído e removido daqui — consulte o `git log` para o histórico.
+Status em 2026-08-24 (ver também `handoff.md` pro estado mais recente,
+2026-09-25 — consolidação de auth P0 + protótipo de design system + CI).
+Histórico de etapas antigas (migração do sistema `PROFILES` para auth por
+usuário, indicadores modulares, boleta diária) foi concluído e removido
+daqui — consulte o `git log` para o histórico.
 
-## Concluído recentemente
+## Concluído recentemente (2026-09-25)
+- Consolidação do contexto de auth repetido (P0 da revisão de código
+  anterior): `requireMembership`/`requireGestor`/`requireEntregador`
+  aceitam usuário já resolvido; novo `resolveViewerMode()`; dedupe em
+  `/gestor`, `/gestor/entregadores/[userId]`, `/gestor/auditoria`; JOIN
+  único em `adminGetTargetMemberData()`. Ver `handoff.md` pro detalhe e o
+  que foi testado.
+- Protótipo de design system: cor de marca própria (índigo/violeta,
+  substituindo o laranja genérico do template), tema claro real (opt-in,
+  ainda sem toggle de UI), tipografia serifada + `tabular-nums` nos números
+  de KPI (`stats-overview.tsx`). Pendência conhecida: pintura do tema claro
+  não reflete os tokens em `<html>`/`<body>` ao testar via DevTools — ver
+  `handoff.md`.
+- CI (`.github/workflows/ci.yml`): `tsc`/`npm test`/`npm run build` em
+  push/PR.
+
+## Concluído anteriormente
 - Auth por e-mail/senha (scrypt) + OAuth Google, cookie de sessão assinado (HMAC).
 - Migração silenciosa de hashes de senha do formato legado para scrypt no login.
 - Gestão de usuários (`/gestao`, restrita a `ADMIN_EMAIL`).
@@ -266,5 +284,12 @@ espremido no fim desta revisão.
 - **Cobertura de testes ainda parcial**: só funções puras de `lib/` têm
   teste. Server actions (`app/actions/*.ts`) e componentes não são testados
   — dependem de banco/`next/headers`, exigiriam mocks ou um banco de teste.
-- Sem CI configurado rodando `npm test` / `tsc --noEmit` / `npm run build`
-  automaticamente em PRs.
+- ~~Sem CI configurado~~ resolvido em 2026-09-25 (`.github/workflows/ci.yml`).
+- **Tema claro do design system não pinta `<html>`/`<body>` de verdade**:
+  os tokens (`[data-theme="light"]` em `app/globals.css`) resolvem
+  corretamente via `getComputedStyle` (`--background` = `#f4f5f8`), mas o
+  `background-color` computado final de `<html>`/`<body>` não muda —
+  alguma regra (suspeita: `shadcn/tailwind.css` importado) ganha a
+  cascata pro valor literal. Só importa quando o toggle de UI for
+  construído (hoje o tema claro é só tokens prontos, sem toggle) — não é
+  bloqueante, mas precisa investigar antes de expor a troca pro usuário.
