@@ -1,46 +1,112 @@
 # Handoff — MyLog Multi-Tenant
 
-Última atualização: 2026-09-25. Se esta sessão for interrompida, leia este
-arquivo primeiro, depois `TODO.md` (histórico detalhado por fase e da
-revisão) e o plano original em
+Última atualização: 2026-09-25 (sessão de aprimoramento + design system,
+worktree `worktree-mylog-p0-design-system`). Se esta sessão for
+interrompida, leia este arquivo primeiro, depois `TODO.md` (histórico
+detalhado por fase e da revisão) e o plano original em
 `C:\Users\IOT DEXTER\.claude\plans\vamos-arquitetar-um-sistema-mutable-quail.md`.
 
-## 🎯 Próxima tarefa principal (definida pelo usuário em 2026-09-25)
+## 🎯 Próxima tarefa principal
 
-**Consolidar o contexto de auth repetido** — os 4 achados de
-eficiência/redundância que a revisão de código encontrou e que ficaram
-deliberadamente sem correção nesta sessão (ver "Revisão de código" em
-`TODO.md` pro relatório completo). Nenhum é vulnerabilidade hoje — são
-queries redundantes ao banco por request + um ponto de manutenção frágil:
+Nenhuma tarefa P0 pendente — a consolidação de auth (abaixo) foi concluída
+e testada nesta sessão. Próximo passo natural: revisar o PR/branch
+`worktree-mylog-p0-design-system` (indigo/violeta como cor de marca +
+tema claro opt-in + KPI serifado) e decidir se propaga a tipografia/tema
+pros outros componentes compartilhados (`daily-records-panel.tsx`,
+`deliveries-panel.tsx`, `finance-panel.tsx`, `dashboard-header.tsx`) —
+ver "Design system" abaixo antes de propagar.
 
-1. `app/gestor/page.tsx`: `getOrgOverview()`, `listPendingInvites()` e
-   `listAcceptedInvites()` cada um chama `requireGestor()`
-   independentemente dentro do mesmo `Promise.all` → 6 SELECTs (3x user +
-   3x membership) em vez de ~2 por carregamento da página.
-2. `app/gestor/entregadores/[userId]/page.tsx`: chama `requireUser()`
-   (pra checar `isAdminEmail`) e depois `requireGestor()` no branch
-   não-admin, que internamente chama `requireUser()` de novo — SELECT de
-   `users` duplicado.
-3. `app/actions/admin-override.ts` `adminGetTargetMemberData()`: duas
-   queries sequenciais (membership+user, depois organizations) que dá
-   pra resolver num JOIN só.
-4. A checagem "isso é ADMIN MASTER?" (`isAdminEmail(user.email)`) é
-   chamada ad-hoc em `app/gestor/entregadores/[userId]/page.tsx` e
-   `app/gestor/auditoria/page.tsx` em vez de um helper único tipo
-   `resolveViewerMode()` — não é lógica duplicada (ambos delegam pra
-   `isAdminEmail()` em `lib/auth.ts`, fonte única), mas é um padrão
-   frágil: se o conceito de "admin" mudar no futuro (múltiplos admins,
-   flag no banco), tem 3+ lugares pra lembrar de atualizar em vez de um.
+## ✅ Concluído nesta sessão (2026-09-25) — consolidação de auth (P0)
 
-**Abordagem sugerida** (discutida com o usuário, não é obrigatória):
-estender `requireMembership()`/`requireGestor()` em `app/actions/auth.ts`
-pra aceitar opcionalmente um usuário já resolvido (evita o SELECT
-duplicado), e criar um helper único de "modo de visualização" que resolve
-gestor-normal vs. admin-master de uma vez, chamado no topo de cada página
-do `/gestor/*`. É uma mudança pequena e contida, mas toca o contrato de
-helpers compartilhados usados em todo o app — testar com `tsc`/`npm test`
-+ smoke test manual (dashboard normal, `/gestor`, drill-down como gestor
-E como admin) antes de considerar concluído.
+Os 4 achados de eficiência/redundância da revisão de código anterior
+(chamadas repetidas de `requireGestor()`/`requireUser()` por request) —
+resolvidos com abordagem retrocompatível (parâmetro opcional, default =
+comportamento antigo, nada quebra pra quem não passar o contexto já
+resolvido):
+
+1. `app/actions/auth.ts`: `requireMembership()`/`requireGestor()`/
+   `requireEntregador()` agora aceitam um `knownUser` opcional (usuário já
+   resolvido no mesmo request) — evita o SELECT duplicado de `users`.
+2. Novo `resolveViewerMode()` em `app/actions/auth.ts` — ponto único que
+   decide "admin master ou gestor normal?" pra telas onde os dois modos
+   são EXCLUSIVOS (ex.: `/gestor/entregadores/[userId]`). Telas onde
+   "é admin" é só um flag ADICIONAL sobre um `requireGestor()` sempre
+   obrigatório (ex.: `/gestor/auditoria`) continuam resolvendo os dois
+   fatos separadamente — não force-encaixado no mesmo helper.
+3. `app/gestor/page.tsx`: `getOrgOverview()`/`listPendingInvites()`/
+   `listAcceptedInvites()` (em `app/actions/gestor.ts` e
+   `app/actions/invites.ts`) agora aceitam um `MembershipContext` já
+   resolvido opcional — a página resolve uma vez, repassa pras 3.
+4. `app/actions/admin-override.ts` `adminGetTargetMemberData()`: as duas
+   queries sequenciais (membership+user, depois organizations) viraram um
+   JOIN só.
+5. `app/gestor/entregadores/[userId]/page.tsx` migrado pra
+   `resolveViewerMode()` (era `requireUser()` + `isAdminEmail()` ad-hoc +
+   `requireGestor()` duplicado). `app/gestor/auditoria/page.tsx` reaproveita
+   o `user` já resolvido em vez de rechamar `requireUser()`.
+
+**Testado:** `tsc --noEmit` limpo, `npm test` 34/34, `npm run build`
+(produção) limpo, smoke test manual no navegador — dashboard normal
+(`/dashboard`), `/gestor` (KPIs + composição por painel + entregadores),
+drill-down como ADMIN MASTER (`/gestor/entregadores/2`, banner correto),
+`/gestor/auditoria` (histórico + botões de exclusão do admin). Todos os
+fluxos renderizaram e navegaram corretamente após a mudança.
+
+## ✅ Concluído nesta sessão — design system (protótipo, Seção 4 do doc de planejamento)
+
+Decisão de cor de marca (raciocínio tese/antítese/síntese, documentado no
+doc "MyLog — Plano de Aprimoramento & Design UI/UX",
+https://claude.ai/artifact/DAxwSunF5mGc7RSkNy4naZ, comentário respondido
+por delegação do usuário em 2026-09-25 — "tome as decisões por si"): laranja
+já é a cor de conteúdo do painel "jadlog" (colidiria marca-vs-dado), azul já
+é `panel2`, verde já é semântica de saldo positivo, vermelho já é
+`destructive` — **índigo/violeta (`#8d7bdb` escuro / `#5b3fa8` claro)**
+ficou como família de matiz mais distante das quatro já reservadas, evitando
+também o roxo-azulado genérico de SaaS (Stripe/Linear, hue ~265) ao puxar
+mais pro violeta/ameixa (hue ~255).
+
+Implementado em `app/globals.css` (mesmos nomes de variável de sempre,
+só valores novos — zero mudança de código nos componentes que já usam
+`bg-primary`/`text-primary`/etc.):
+- Tema escuro continua o padrão incondicional (comportamento inalterado
+  pro usuário atual) — `--primary`/`--ring`/`--chart-1`/`--sidebar-primary`
+  trocaram de laranja pra índigo.
+- Tema claro real, novo, **opt-in via `[data-theme="light"]`** (ainda sem
+  toggle de UI — só os tokens, prontos pra quando o toggle for construído).
+- `--font-display` (stack de sistema serifado, sem webfont, mesma lógica
+  de peso zero-custo-de-rede) aplicado só no número de destaque dos cards
+  de KPI (`stats-overview.tsx`) + `tabular-nums` — hierarquia vem do
+  tamanho/tipografia, não do peso.
+
+**Testado:** `tsc`/`npm test`/`npm run build` limpos. Smoke test visual no
+navegador confirmou o índigo aplicado corretamente em `/select`, `/gestor`
+e `/dashboard`, e o número de KPI renderizando serifado. **Pendência
+identificada, não bloqueante:** ao testar o tema claro ao vivo via
+`document.documentElement.setAttribute('data-theme','light')` no
+DevTools, o valor de `--background` resolve corretamente (`#f4f5f8`,
+confirmado via `getComputedStyle`), mas a pintura final de `background-color`
+de `<html>`/`<body>` não mudou — há alguma regra com especificidade maior
+(possivelmente do `shadcn/tailwind.css` importado) ganhando a cascata pro
+`background-color` literal. Não afeta o tema escuro (default, já testado
+visualmente) nem bloqueia nada hoje (não existe toggle de UI ainda) — mas
+precisa ser investigado/corrigido antes de construir o toggle real.
+
+## ✅ Concluído nesta sessão — CI
+
+`.github/workflows/ci.yml` novo — roda `tsc --noEmit`, `npm test` e
+`npm run build` em push/PR pra `main`. Confirmado que o build não precisa
+de banco real (todas as rotas são dinâmicas, nenhuma prerenderiza com
+acesso a dado) — `DATABASE_URL` no workflow é uma string fictícia só pra
+satisfazer o construtor do `pg.Pool`, nunca aponta pro Neon de produção.
+
+## Deliberadamente fora de escopo desta sessão
+
+P3 do roadmap (exportação PDF, painéis customizáveis por organização) —
+"pivot maior" que precisa de planejamento dedicado antes de começar, não
+um encaixe incremental (ver Seção 5 do doc de planejamento). Cobertura de
+teste pra server actions também não avançou nesta sessão (ainda só
+`lib/` tem teste automatizado) — mockar banco/`next/headers` é um esforço
+à parte.
 
 ## Estado do projeto
 

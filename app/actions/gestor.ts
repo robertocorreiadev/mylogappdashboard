@@ -3,15 +3,18 @@
 import { and, desc, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { memberships, users, auditLogs } from "@/lib/db/schema"
-import { requireGestor } from "@/app/actions/auth"
+import { requireGestor, type MembershipContext } from "@/app/actions/auth"
 import {
   dailyRecordsForOrg, deliveriesForOrg, transactionsForOrg,
   dailyRecordsForUserAllPanels, deliveriesForUserAllPanels, transactionsForUserAllPanels,
 } from "@/lib/db/scopes"
 import { panelLabel, PANEL_LABELS } from "@/lib/format"
 
-export async function getOrgOverview() {
-  const { organizationId } = await requireGestor()
+// `known` deixa o chamador reaproveitar um requireGestor() já resolvido no
+// mesmo request (ex.: a página resolve uma vez e repassa pras funções que
+// ela mesma chama em paralelo) — omitido, resolve sozinho como antes.
+export async function getOrgOverview(known?: MembershipContext) {
+  const { organizationId } = known ?? await requireGestor()
 
   const [dailyRecords, deliveries, transactions, members] = await Promise.all([
     dailyRecordsForOrg({ organizationId }),
@@ -33,8 +36,8 @@ export async function getOrgOverview() {
 
 // Anti-IDOR: só retorna dados se targetUserId tiver membership de entregador
 // ATIVA na MESMA organização do gestor logado — nunca confia no id da URL sozinho.
-export async function getMemberDashboardData(targetUserId: number) {
-  const { organizationId } = await requireGestor()
+export async function getMemberDashboardData(targetUserId: number, known?: MembershipContext) {
+  const { organizationId } = known ?? await requireGestor()
 
   const [member] = await db.select({ name: users.name, email: users.email })
     .from(memberships)
@@ -80,8 +83,8 @@ export async function getMemberDashboardData(targetUserId: number) {
 
 // Somente leitura — audit_logs nunca ganha update/delete nesta app (ver
 // lib/audit.ts). Limitado às 200 entradas mais recentes da organização.
-export async function getAuditLog() {
-  const { organizationId } = await requireGestor()
+export async function getAuditLog(known?: MembershipContext) {
+  const { organizationId } = known ?? await requireGestor()
   return db.select({
     id: auditLogs.id,
     entityType: auditLogs.entityType,

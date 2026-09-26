@@ -18,9 +18,9 @@ export default async function GestorPage() {
   }
 
   const [{ dailyRecords, deliveries, transactions, members }, pendingInvites, acceptedInvites] = await Promise.all([
-    getOrgOverview(),
-    listPendingInvites(),
-    listAcceptedInvites(),
+    getOrgOverview(ctx),
+    listPendingInvites(ctx),
+    listAcceptedInvites(ctx),
   ])
 
   // Resumo por entregador — agregado em memória a partir dos dados já

@@ -19,14 +19,18 @@ export default async function AuditoriaPage() {
   // getAuditLog() é sempre requireGestor()-scoped, então pra admin sem
   // membership de gestor isso ainda funcionaria só se ele também for
   // gestor de alguma org (ex.: Legado, no caso do ADMIN_EMAIL atual).
+  // Reaproveita o `user` já resolvido acima (evita um segundo SELECT de
+  // `users` dentro de requireGestor()) — "é admin?" e "é gestor?" são fatos
+  // independentes nesta tela (não usa resolveViewerMode(), que trata os dois
+  // como exclusivos), então continuam checados separadamente.
   let ctx
   try {
-    ctx = await requireGestor()
+    ctx = await requireGestor(user)
   } catch {
     redirect("/select")
   }
 
-  const logs = await getAuditLog()
+  const logs = await getAuditLog(ctx)
   const canDelete = isAdminEmail(user.email)
 
   return (

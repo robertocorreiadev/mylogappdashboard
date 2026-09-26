@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { and, desc, eq, isNull, isNotNull } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { invites, users } from "@/lib/db/schema"
-import { requireGestor, requireUser } from "@/app/actions/auth"
+import { requireGestor, requireUser, type MembershipContext } from "@/app/actions/auth"
 import { generateInviteToken, hashInviteToken, acceptInvite } from "@/lib/invites"
 
 // Dias até expirar. "0" = sem expiração prática (100 anos) — a coluna
@@ -34,8 +34,8 @@ export async function createInvite(formData: FormData) {
   return { success: true, url: `${baseUrl}/convite/${token}` }
 }
 
-export async function listPendingInvites() {
-  const { organizationId } = await requireGestor()
+export async function listPendingInvites(known?: MembershipContext) {
+  const { organizationId } = known ?? await requireGestor()
   return db.select().from(invites)
     .where(and(
       eq(invites.organizationId, organizationId),
@@ -63,8 +63,8 @@ export async function revokeAllPendingInvites() {
 
 // Histórico de quem já entrou na organização via convite (provenance —
 // não é a auditoria de edições, é só "quem convidou quem, e quando aceitou").
-export async function listAcceptedInvites() {
-  const { organizationId } = await requireGestor()
+export async function listAcceptedInvites(known?: MembershipContext) {
+  const { organizationId } = known ?? await requireGestor()
   return db.select({
     id: invites.id,
     email: invites.email,

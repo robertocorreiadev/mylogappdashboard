@@ -33,15 +33,15 @@ export async function adminGetTargetMemberData(targetUserId: number) {
     organizationId: memberships.organizationId,
     name: users.name,
     email: users.email,
+    orgName: organizations.name,
   })
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
+    .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
     .where(and(eq(memberships.userId, targetUserId), eq(memberships.role, "entregador"), eq(memberships.status, "active")))
     .limit(1)
 
   if (!member) return null
-
-  const [orgRow] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, member.organizationId)).limit(1)
 
   const [dailyRecords, deliveries, transactions] = await Promise.all([
     dailyRecordsForUserAllPanels({ organizationId: member.organizationId, userId: targetUserId }),
@@ -67,7 +67,7 @@ export async function adminGetTargetMemberData(targetUserId: number) {
   return {
     member: { name: member.name, email: member.email },
     organizationId: member.organizationId,
-    orgName: orgRow?.name ?? "—",
+    orgName: member.orgName ?? "—",
     panels,
   }
 }

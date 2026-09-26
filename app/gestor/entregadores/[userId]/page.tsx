@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
-import { requireUser, requireGestor } from "@/app/actions/auth"
-import { isAdminEmail } from "@/lib/auth"
+import { resolveViewerMode } from "@/app/actions/auth"
 import { getMemberDashboardData } from "@/app/actions/gestor"
 import {
   adminGetTargetMemberData,
@@ -12,9 +11,9 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { MemberPanelTabs } from "@/components/member-panel-tabs"
 
 export default async function GestorEntregadorPage({ params }: { params: Promise<{ userId: string }> }) {
-  let user
+  let viewer
   try {
-    user = await requireUser()
+    viewer = await resolveViewerMode()
   } catch {
     redirect("/")
   }
@@ -26,15 +25,15 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
   // ADMIN MASTER: acesso de escrita a QUALQUER organização, usando a MESMA
   // UI do entregador — nunca as actions normais de entregador (essas
   // continuam restritas ao dono do registro). Ver app/actions/admin-override.ts.
-  if (isAdminEmail(user.email)) {
+  if (viewer.mode === "admin") {
     const data = await adminGetTargetMemberData(targetUserId)
     if (!data) notFound()
 
     return (
       <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
         <DashboardHeader
-          userName={user.name}
-          userEmail={user.email}
+          userName={viewer.user.name}
+          userEmail={viewer.user.email}
           panelName={data.member.name}
           viewerMode={{ entregadorName: data.member.name, mode: "admin" }}
         />
@@ -56,24 +55,17 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
   }
 
   // Fluxo normal do gestor: somente leitura, restrito à própria organização.
-  let ctx
-  try {
-    ctx = await requireGestor()
-  } catch {
-    redirect("/select")
-  }
-
   // getMemberDashboardData já confirma que targetUserId tem membership de
   // entregador ativa na MESMA organização do gestor logado (anti-IDOR) —
   // retorna null se não pertencer, o que aqui vira 404 em vez de vazar dado.
-  const data = await getMemberDashboardData(targetUserId)
+  const data = await getMemberDashboardData(targetUserId, viewer)
   if (!data) notFound()
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <DashboardHeader
-        userName={ctx.user.name}
-        userEmail={ctx.user.email}
+        userName={viewer.user.name}
+        userEmail={viewer.user.email}
         panelName={data.member.name}
         viewerMode={{ entregadorName: data.member.name }}
       />
