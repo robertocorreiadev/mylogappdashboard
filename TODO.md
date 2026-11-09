@@ -342,6 +342,28 @@ espremido no fim desta revisão.
       deploy próprio quando um mais novo chega. A API de deployments do
       GitHub demorou a refletir — conferir no painel da Vercel, não só nela.
 
+## Segurança do login Google — D1 e D4 da spec (2026-11-09)
+- [x] D1: o login Google só liga ou cria conta pelo e-mail se ele for
+      **autoritativo** (`verified_email === true` e `@gmail.com` ou conta
+      Workspace com `hd` = domínio). Conta já ligada a outro `google_id` →
+      recusa (`google_conflict`). Regras puras em `lib/google-link.ts` (12
+      testes). `loginWithGoogle` saiu de `app/actions/auth.ts` (`"use server"`)
+      para `lib/google-auth.ts`: confia no perfil recebido, então não pode ser
+      Server Action. Callback apaga os cookies de state e convite em toda saída.
+- [x] D4: a tela de login mostra os erros `?error=` do Google (tabela fixa).
+      Testado com curl: mensagens certas, código desconhecido/`<script>` não
+      mostra nada, cookies apagados no cancelamento e no state errado.
+      **Não testado:** login Google real (exige conta e credenciais) — testar
+      em produção depois do deploy.
+- [ ] Débito: cadastro concorrente pelo Google (dois callbacks ao mesmo tempo
+      para o mesmo usuário novo) — o 2º `insert` bate na restrição única e o
+      usuário vê `google_failed`, embora a conta tenha sido criada. Raro e
+      seguro (erro, não acesso errado). Correção: `onConflictDoNothing` + nova
+      leitura.
+- Efeito colateral aceito: conta Google comum com e-mail de outro domínio
+  (ex.: Google criado com @hotmail.com) não cria nem liga conta pelo Google;
+  usa e-mail e senha. Contas já ligadas pelo `google_id` não mudam.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

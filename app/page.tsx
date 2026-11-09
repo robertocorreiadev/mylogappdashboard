@@ -5,9 +5,26 @@ import { LoginForm } from "@/components/login-form"
 import { RegisterForm } from "@/components/register-form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default async function LoginPage() {
+// Erros que o callback do Google devolve em ?error= (D4). Código desconhecido
+// não mostra nada: o texto nunca vem da URL, só desta tabela.
+const LOGIN_ERRORS: Record<string, string> = {
+  google_cancelled:     "Login com Google cancelado.",
+  google_invalid_state: "A sessão de login expirou. Tente entrar com Google de novo.",
+  google_failed:        "Não foi possível entrar com Google. Tente de novo.",
+  google_unverified:    "Não foi possível confirmar o e-mail desta conta Google. Entre com e-mail e senha, ou use uma conta @gmail.com ou da sua empresa (Google Workspace).",
+  google_conflict:      "Este e-mail já está ligado a outra conta Google. Entre com essa conta ou com e-mail e senha.",
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const userId = await getUserId()
   if (userId) redirect("/select")
+
+  const code = (await searchParams).error
+  const errorMsg = typeof code === "string" ? LOGIN_ERRORS[code] : undefined
 
   return (
     <main className="flex min-h-screen items-center justify-center p-5">
@@ -17,6 +34,12 @@ export default async function LoginPage() {
           <span>MYLOG</span>
         </div>
         <h1 className="mb-8 text-center text-lg text-muted-foreground">Painel de Controle</h1>
+
+        {errorMsg && (
+          <p role="alert" className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+            {errorMsg}
+          </p>
+        )}
 
         <Tabs defaultValue="login">
           <TabsList className="grid w-full grid-cols-2">

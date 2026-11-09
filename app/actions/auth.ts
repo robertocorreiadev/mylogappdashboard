@@ -154,34 +154,8 @@ export async function register(formData: FormData) {
   redirect("/select")
 }
 
-export async function loginWithGoogle(
-  googleId: string,
-  email: string,
-  name?: string | null,
-  picture?: string | null,
-  inviteToken?: string | null,
-) {
-  const normalizedEmail = email.trim().toLowerCase()
-  const [byGoogle] = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1)
-  const [byEmail]  = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
-  const existing   = byGoogle ?? byEmail
-  if (existing) {
-    await db.update(users).set({
-      googleId:  existing.googleId  ?? googleId,
-      name:      existing.name      ?? (name ?? undefined),
-      avatarUrl: existing.avatarUrl ?? (picture ?? undefined),
-    }).where(eq(users.id, existing.id))
-    await setUserId(existing.id)
-    if (inviteToken) await acceptInvite(inviteToken, existing.id)
-    return
-  }
-  const [created] = await db.insert(users).values({
-    name: name ?? email.split("@")[0], email: normalizedEmail, googleId, avatarUrl: picture ?? undefined,
-  }).returning()
-  const joinedViaInvite = inviteToken ? (await acceptInvite(inviteToken, created.id)).success : false
-  if (!joinedViaInvite) await createSoloOrgForNewUser(created.id, created.name)
-  await setUserId(created.id)
-}
+// loginWithGoogle fica em lib/google-auth.ts: confia no perfil recebido,
+// então NÃO pode ser uma Server Action deste arquivo "use server" (D1).
 
 export async function logout() {
   await clearUserId()

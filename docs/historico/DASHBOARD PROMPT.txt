@@ -1,0 +1,49 @@
+Implementar:
+
+Sistema de cadastro
+
+Sistema de login com email/senha individual
+
+AuthO com google(login com conta google)
+
+Função de cadastro de entregas diárias para preenchimento do histórico do ano.
+
+Com informativos tanto separação mensal quanto anual para este ano e anos futuros. Com Resumo indicadtivo em linha reta embaixo do ultimo dia do mes, ao final do mês, informando a perfomance daquele mes.
+
+Fazer o mesmo indicador para o resultado anual.Ambos os indicadores dever ser modulares e alterarem conforme os dias são registrados.
+
+Para o registro de boleta diária das entregas, deve-se conter os parâmetros: 
+
+- Valor por entrega(multiplo individual por registro diário do valor de repasse por cada entrega)
+
+- Data(dd/mm/yyyy)
+
+- Entregas realizadas
+
+- Qnt. Entregas Agendadas(sem sucesso)
+
+- Qnt. Entregas Com Ocorrência
+
+- Registro "Despesas do dia (R$)
+
+Indicador Faturamento Bruto (R$)
+
+Indicador Despesas do Dia (R$)
+
+Faturamento Líquido do dia(R$) 
+
+------------------------------------------
+
+Examinar os arquivos anexos e buscar a referência exata que desejo estudar e implementá-la conforme as diretrizes ditas acima e as implementações a mais que pedi.
+
+seja metódico e preciso
+
+Forneça os arquivos adicionais estáveis que deverei jogar na pasta do projeto e o comando para salvar no repositorio github ao final da task.
+--------------------------------
+
+Retire o indicaditvo que diz "sincronizado no rodapé superior do painel após acessar o perfil"
+No rodapé superior ao lado esquerdo onde indica "painel individual 2026 + nuvem"
+altere para um indicador que atualize conforme os anos passarem e retire o "+nuvem"
+
+Na pagina inicial onde diz o nome do usuario, retire.
+Troque pela função pedida anteriormente, login com email, senha e auth0 do google.

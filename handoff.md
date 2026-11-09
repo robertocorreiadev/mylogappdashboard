@@ -30,6 +30,12 @@ fonte única das fórmulas, `useMemo` no filtro dos KPIs, cabeçalho em 375px).
 
 Vercel conferida no painel em 2026-11-09: produção = `9955754` (Ready), com
 todas as correções e débitos. Nada pendente da faixa de quinzenas.
+
+**⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
+produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail
+autoritativo; não deu para testar o fluxo real aqui, exige credenciais).
+Entrar com uma conta já ligada e conferir que segue funcionando. Depois:
+D2 e D3 da spec (§15).
 Branches antigas apagadas em 2026-11-09 (local e GitHub): só resta `main`.
 
 O commit local
@@ -41,17 +47,16 @@ drill-down, cabeçalho estourando em 375px).
 
 ## Auditoria do prompt do painel (2026-11-09)
 
-`..\DASHBOARD PROMPT.txt` (v1) foi auditado contra o código. Resultado em
-`..\DASHBOARD PROMPT v2.txt` (descrição determinística, IDs R-xx).
-Pendências abertas pela auditoria (nada foi corrigido no código):
-- D1 `app/api/auth/google/callback/route.ts`: liga conta por e-mail sem
-  checar `verified_email` (segurança).
-- D2 `components/daily-records-panel.tsx` `RecordForm`: data padrão via
-  `toISOString()` = UTC; das 21:00 às 23:59 abre com a data de amanhã.
-- D3 `app/actions/daily-records.ts`: sem validação numérica no servidor.
-- W1 faixa de quinzenas (`lib/metrics.ts` + `components/stats-overview.tsx`):
-  resolvido — commit + push em 2026-11-09 (seção acima).
-- Decisões do dono: Q1–Q3 na seção 8 do v2.
+**Fonte única da descrição do sistema: `docs/00-spec-painel.md`** (base
+`a99e63f`). Ela basta para reconstruir o painel inteiro: DDL, regras,
+rotas, actions, telas com textos exatos, tema e testes. Os prompts antigos
+(`DASHBOARD PROMPT.txt` v1 e `v2.txt`) e o schema inicial (`SQL FUNC.txt`)
+estão em `docs/historico/`. Commitados em 2026-11-09.
+- Toda mudança de comportamento DEVE atualizar a spec no mesmo commit.
+- Defeitos abertos na §15 (D1, D4, D5, D14 e D16 já corrigidos em 2026-11-09).
+  Prioridade: D2 (data padrão em UTC) e D3 (sem validação numérica no
+  servidor).
+- Decisões do dono: Q1–Q3 na §16.
 
 ## 🎯 Próxima tarefa principal
 

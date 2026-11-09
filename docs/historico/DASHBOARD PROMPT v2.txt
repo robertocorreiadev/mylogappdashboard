@@ -1,0 +1,117 @@
+MYLOG — DESCRIÇÃO DETERMINÍSTICA DO PAINEL (v2)
+Revisão: 2026-11-09. Base: código em mylogappdashboard/ (commit bcda5e7 + mudança não commitada em components/stats-overview.tsx e lib/metrics.ts).
+Substitui: "DASHBOARD PROMPT.txt" (v1, 2026-06-23). O v1 fica guardado como histórico.
+
+COMO LER
+- Cada requisito tem um ID (R-xx). "DEVE" = obrigatório. Os valores entre aspas são textos exatos da tela.
+- Toda regra abaixo descreve o que o sistema FAZ hoje, com o arquivo de origem.
+- [DEFEITO] = comportamento atual que contradiz a intenção. Não copiar como regra.
+- [DECIDIR] = ponto que o v1 deixou aberto. A regra atual vale até o dono decidir.
+- Segredos (DB, SESSION_SECRET, Google) ficam só em .env. Nunca colocar valores neste arquivo.
+
+====================================================================
+0. PILHA E RESTRIÇÕES
+====================================================================
+R-00 Next.js 16 (App Router; `params` de rota é Promise), Drizzle ORM, Postgres Neon, Tailwind + shadcn/ui, Recharts, Vitest.
+R-01 Sem migration runner. Mudança de schema = SQL manual no editor do Neon, antes do deploy do código.
+R-02 Só lib/db/scopes.ts consulta daily_records, deliveries e transactions. O teste lib/db/scopes.test.ts falha se outro arquivo consultar.
+R-03 Barra de "pronto": `tsc --noEmit` limpo + `npm test` limpo + teste manual no navegador.
+
+====================================================================
+1. CONTA E ACESSO (v1 linhas 3–7, 48–49)
+====================================================================
+R-10 Página "/" = login. Título "MYLOG", subtítulo "Painel de Controle", abas "Entrar" e "Cadastrar". Não mostra nome de usuário. Usuário já logado vai para "/select". (app/page.tsx)
+R-11 Cadastro: nome, e-mail, senha, confirmação. Regras: nome obrigatório; e-mail em minúsculas e sem espaços; senha com 6+ caracteres; senha = confirmação; e-mail único ("Este e-mail já está cadastrado."). (app/actions/auth.ts register)
+R-12 Login por e-mail e senha. Hash scrypt. Hash legado (HMAC) migra para scrypt no login certo. Erro genérico: "E-mail ou senha inválidos."
+R-13 Limite de tentativas: 5 falhas por e-mail em 15 min bloqueiam por 15 min. Estado em memória do processo: não vale entre instâncias nem sobrevive a deploy. (lib/rate-limit.ts)
+R-14 Login Google = OAuth 2.0 direto com o Google (rotas /api/auth/google e /callback). NÃO é Auth0. O "AuthO" do v1 significa este fluxo. Escopo "openid email profile"; cookie de state anti-CSRF com 10 min.
+R-15 Google com conta existente: liga pelo google_id; se não houver, liga pelo e-mail. Conta nova: nome = nome do Google ou parte do e-mail antes do "@".
+     [DEFEITO] O callback não confere `verified_email` antes de ligar pelo e-mail. Risco: uma conta Google com e-mail não verificado igual ao de um usuário existente entra na conta dele. Correção: recusar a ligação por e-mail quando `verified_email !== true`.
+R-16 Sessão: cookie com userId assinado por HMAC-SHA256 (SESSION_SECRET), validade de 365 dias. Não existe revogação no servidor. (lib/session.ts)
+R-17 Perfil (engrenagem no cabeçalho): alterar nome e e-mail; alterar senha (senha atual + nova com 6+ caracteres + confirmação).
+R-18 Todo cadastro novo (senha ou Google) sem convite ganha uma organização própria e o papel "entregador". (lib/db/onboarding.ts)
+
+====================================================================
+2. NAVEGAÇÃO E CABEÇALHO (v1 linhas 44–46)
+====================================================================
+R-20 "/select" mostra "Painel JADLOG" (/dashboard), "Painel 2" (/panel2) e, só para quem tem papel gestor, "Painel do Gestor" (/gestor).
+R-21 Cabeçalho do painel, à esquerda: nome do painel ("JADLOG" ou "Painel 2") e a linha "Painel de Controle · {ano}". {ano} = new Date().getFullYear() no navegador; muda sozinho na virada do ano. Sem "+ nuvem". Sem indicador "sincronizado". (components/dashboard-header.tsx)
+R-22 Cabeçalho, à direita: "Logado como" + nome, engrenagem (perfil), "Gestão" (só ADMIN_EMAIL), "⇄ Trocar painel", "Sair".
+     [DECIDIR] O v1 manda retirar o nome do usuário "na página inicial". A "/" não mostra nome (cumprido). O cabeçalho dos painéis ainda mostra "Logado como {nome}". Decidir se fica.
+R-23 Os painéis "jadlog" e "panel2" guardam dados separados (coluna `panel`). Nenhuma tela soma os dois num só número.
+
+====================================================================
+3. BOLETA DIÁRIA (v1 linhas 9, 15–33)
+====================================================================
+R-30 Uma boleta por (usuário, painel, data): restrição única daily_records_user_id_panel_date_key. Salvar uma data que já tem boleta SUBSTITUI os valores dela (não soma, não duplica).
+R-31 Campos do formulário "Registrar entrega do dia" (components/daily-records-panel.tsx):
+     | Tela                       | Coluna              | Tipo          | Padrão | Regra                         |
+     |----------------------------|---------------------|---------------|--------|-------------------------------|
+     | Valor por entrega (R$)     | value_per_delivery  | numeric(10,2) | 3,50   | obrigatório; vírgula vira ponto |
+     | Data                       | date                | date          | hoje   | obrigatório                   |
+     | Entregas realizadas        | delivered           | inteiro ≥ 0   | 0      | vazio = 0                     |
+     | Agendadas (sem sucesso)    | scheduled           | inteiro ≥ 0   | 0      | vazio = 0                     |
+     | Com ocorrência             | occurrences         | inteiro ≥ 0   | 0      | vazio = 0                     |
+     | Despesas do dia (R$)       | expenses            | numeric(10,2) | 0      | vazio = 0                     |
+R-32 Formato de data: o banco guarda AAAA-MM-DD. A tabela mostra DD/MM/AAAA + dia da semana ("Dom".."Sáb"; sábado e domingo em destaque). O campo de entrada é <input type="date"> e mostra o formato do navegador.
+     [DEFEITO] O padrão "hoje" usa new Date().toISOString() = data em UTC. No Brasil (UTC−3), das 21:00 às 23:59 o formulário abre com a data de AMANHÃ. Correção: montar a data com getFullYear/getMonth/getDate locais.
+R-33 Fórmulas (iguais em todas as telas):
+     Bruto do dia   = delivered × value_per_delivery
+     Líquido do dia = Bruto do dia − expenses
+     scheduled e occurrences são só contagem: não entram em nenhum valor em R$.
+     [DECIDIR] O v1 diz "múltiplo individual por registro diário". A leitura implementada é: cada boleta tem o próprio valor por entrega, e o bruto multiplica só as entregas realizadas.
+R-34 O formulário mostra em tempo real, antes de salvar: "Faturamento bruto", "Despesas" (com "−") e "Faturamento líquido" (verde se ≥ 0, vermelho se < 0).
+R-35 Cada boleta registra auditoria (criar, alterar, excluir) com o diff campo a campo. (lib/audit.ts)
+     [DEFEITO] O servidor não valida o valor por entrega nem os números (aceita negativo e texto). Texto inválido gera erro 500 do banco em vez de mensagem. Correção: validar no servidor e devolver { error }.
+
+====================================================================
+4. HISTÓRICO E RESUMOS MENSAL/ANUAL (v1 linhas 11–13)
+====================================================================
+R-40 Filtros: ano ("Todos os anos" + anos que têm boleta), mês ("Todos os meses" + meses com boleta no ano escolhido), situação ("Todos" | "Registrados" = entregas > 0 | "Pendentes" = boleta salva com entregas = 0). Os anos vêm dos dados: anos futuros aparecem sozinhos.
+R-41 Tabela agrupada por ano e mês. Ordem: anos e meses do mais novo para o mais velho; dentro do mês, datas da mais nova para a mais velha.
+R-42 Resumo mensal: uma linha "↳ Resumo {Mês} {Ano}" no FIM do bloco de cada mês. Mostra: dias com boleta, total de entregas, Bruto, Despesas, Líquido, Média/dia (= Líquido ÷ dias com boleta) e "▲ Positivo" ou "▼ Negativo".
+     Como a ordem é decrescente, essa linha fica abaixo do dia MAIS ANTIGO do mês.
+     [DECIDIR] O v1 diz "embaixo do último dia do mês". Escolher: (a) manter a ordem decrescente e o resumo no fim do bloco (atual); ou (b) ordem crescente, para o resumo ficar abaixo do último dia corrido.
+R-43 Resumo anual: uma linha "▶ Resumo Anual {Ano}" por ano exibido, com os mesmos campos do R-42 somados no ano. Todas as linhas anuais ficam juntas no fim da tabela, depois de todos os meses.
+R-44 Os resumos usam todas as boletas do mês ou ano. O filtro de situação (R-40) esconde linhas mas NÃO muda os totais.
+R-45 Os resumos são calculados a cada renderização. Salvar, alterar ou excluir uma boleta atualiza tudo sem recarregar a página (revalidatePath).
+R-46 "Exportar CSV": exporta o período do filtro de ano/mês (ignora o filtro de situação). Separador ";", BOM UTF-8, cabeçalho em português, proteção contra injeção de fórmula. (lib/csv.ts)
+
+====================================================================
+5. INDICADORES DO TOPO (cartões)
+====================================================================
+R-50 Cinco cartões (components/stats-overview.tsx): "Entregas realizadas" (+ "N dias trabalhados"), "Fat. bruto acumulado" (+ despesas), "Fat. líquido acumulado" (+ média/dia), "Rastreio (total)" (+ em aberto), "Saldo financeiro".
+R-51 "Dias trabalhados" = número de boletas no período, incluindo boletas com 0 entregas.
+R-52 Na aba "Boleta Diária" os cartões seguem o filtro de ano/mês dela. Na aba "Financeiro", seguem o filtro dela. Nas outras abas, mostram o total.
+R-53 [NÃO COMMITADO] Faixa "Quinzenas" no cartão de líquido: 1ª = dias 01–15; 2ª = dia 16 até o último dia com boleta. Mês de referência = mês da boleta mais recente do período filtrado. (lib/metrics.ts, 10 testes)
+
+====================================================================
+6. OUTRAS ABAS DO PAINEL
+====================================================================
+R-60 Abas, nesta ordem: "Boleta Diária" (abre primeiro), "Rastreio", "Financeiro", "Visão Geral".
+R-61 Rastreio: código, destinatário, endereço, cidade, valor, prazo, status ∈ {pendente, em_transito, entregue, cancelada}.
+R-62 Financeiro: lançamentos receita/despesa com descrição, categoria, valor e data; saldo = receitas − despesas. É separado das despesas da boleta: um não entra no outro.
+R-63 Visão Geral: gráficos de entregas por status, boletas por mês (bruto, despesas, líquido) e financeiro por mês.
+
+====================================================================
+7. MULTI-EMPRESA, GESTOR E ADMIN (fora do v1, já existe)
+====================================================================
+R-70 Organizações, papéis "gestor" e "entregador". Um usuário pode ter os dois papéis ativos, nunca dois do mesmo papel.
+R-71 Convites do gestor: token de 256 bits guardado como sha256; validade de 1, 7 ou 30 dias, ou "sem expiração" (data 100 anos à frente); pode limitar a um e-mail; revogação individual e em massa.
+R-72 Painel do gestor (/gestor): KPIs da organização, composição por painel (nunca somada) e drill-down só-leitura de cada entregador da MESMA organização (outra organização = 404).
+R-73 Auditoria (/gestor/auditoria): 200 entradas mais recentes, só leitura.
+R-74 ADMIN MASTER (usuário = ADMIN_EMAIL): edita e exclui dados de qualquer organização nas mesmas telas, com faixa vermelha "⚠ Modo ADMIN MASTER". Toda ação dele fica na auditoria. Ele pode excluir uma entrada de auditoria; a exclusão grava um meta-registro.
+
+====================================================================
+8. PENDÊNCIAS ABERTAS DESTA AUDITORIA
+====================================================================
+Defeitos (corrigir em tarefa própria):
+  D1 R-15 Google sem checagem de verified_email (segurança).
+  D2 R-32 Data padrão em UTC (abre com amanhã depois das 21:00).
+  D3 R-35 Sem validação de números no servidor.
+Decisões do dono:
+  Q1 R-22 Manter "Logado como {nome}" no cabeçalho?
+  Q2 R-42 Resumo mensal: ordem decrescente (atual) ou crescente?
+  Q3 R-33 Confirmar: bruto = só entregas realizadas × valor.
+Trabalho em curso:
+  W1 R-53 Faixa de quinzenas: testada (44/44), sem commit e sem registro no handoff.md.
