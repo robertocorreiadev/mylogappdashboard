@@ -364,6 +364,25 @@ espremido no fim desta revisão.
   (ex.: Google criado com @hotmail.com) não cria nem liga conta pelo Google;
   usa e-mail e senha. Contas já ligadas pelo `google_id` não mudam.
 
+## Validação no servidor e "hoje" local — D2, D3, D9 e D12 da spec (2026-11-09)
+- [x] D3/D12: todas as actions de escrita (normais e admin) validam no
+      servidor com `lib/forms.ts` e devolvem `{ error }` (antes: erro 500 do
+      Postgres com texto, valor negativo aceito, exceção sem mensagem na UI).
+      Forms mostram o erro (`FormError`) e **mantêm os campos** (`onSubmit`
+      em vez de `action`, porque o React 19 limpa o form depois de uma action).
+- [x] D2: "hoje" sem UTC — `localDateISO()` no cliente (data padrão dos forms
+      e nome dos CSV) e `todayISOIn("America/Sao_Paulo")` no servidor.
+- [x] D9: `adminSaveDailyRecord` só audita update que devolveu linha.
+- [x] Revisão de código: 8 achados, todos corrigidos (form limpo após erro,
+      `in` aceitando "constructor" como painel, ".5"/"3." recusados, update
+      de lançamento inexistente dizendo "sucesso", status sem validação no
+      update, data via locale `en-CA`, API do id, tipo/caixa de erro repetidos).
+- Testado: tsc, 86/86 testes, build; navegador em `/dashboard` só com dados
+  **inválidos** (o `.env` local aponta para o Neon): boleta, financeiro e
+  rastreio mostram o erro e mantêm os campos; consulta no banco confirmou 0
+  linhas de teste gravadas. Não testado: um salvamento válido (gravaria em
+  produção) — conferir em uso normal depois do deploy.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

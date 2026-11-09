@@ -3,6 +3,9 @@
 import { useMemo, useState, useTransition } from "react"
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
+import { FormError } from "@/components/form-error"
+import type { ActionResult } from "@/lib/forms"
+import { localDateISO } from "@/lib/dates"
 import { createTransaction, deleteTransaction, updateTransaction } from "@/app/actions/transactions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,8 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, formatDate, MONTHS } from "@/lib/format"
 import { toCsv, downloadCsv } from "@/lib/csv"
 
-type CreateAction = (formData: FormData) => Promise<void>
-type UpdateAction = (formData: FormData) => Promise<void>
+// D12: as actions devolvem { error } em vez de lançar; o form mostra o erro.
+type CreateAction = (formData: FormData) => Promise<ActionResult>
+type UpdateAction = (formData: FormData) => Promise<ActionResult>
 type DeleteAction = (id: number) => Promise<void>
 
 function TransactionForm({
@@ -28,17 +32,25 @@ function TransactionForm({
 }: { initial?: Transaction; onClose: () => void; panel?: string; onCreate?: CreateAction; onUpdate?: UpdateAction }) {
   const [isPending, startTransition] = useTransition()
   const [type, setType] = useState(initial?.type ?? "receita")
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit(fd: FormData) {
+  // onSubmit + preventDefault, não `action`: o React 19 limpa os campos depois
+  // de uma `action`, e com erro o usuário perderia o que digitou.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    setError(null)
     startTransition(async () => {
-      if (initial) { fd.append("id", String(initial.id)); await onUpdate(fd) }
-      else await onCreate(fd)
+      let res: ActionResult
+      if (initial) { fd.append("id", String(initial.id)); res = await onUpdate(fd) }
+      else res = await onCreate(fd)
+      if (res?.error) { setError(res.error); return }
       onClose()
     })
   }
 
   return (
-    <form action={handleSubmit} className="grid gap-4">
+    <form onSubmit={handleSubmit} className="grid gap-4">
       <input type="hidden" name="panel" value={panel} />
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-2">
@@ -71,9 +83,10 @@ function TransactionForm({
         <div className="grid gap-2">
           <Label htmlFor="date">Data</Label>
           <Input id="date" name="date" type="date"
-            defaultValue={initial?.date ?? new Date().toISOString().slice(0, 10)} />
+            defaultValue={initial?.date ?? localDateISO()} />
         </div>
       </div>
+      <FormError message={error} />
       <DialogFooter>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Salvando..." : initial ? "Salvar alterações" : "Salvar lançamento"}
@@ -192,7 +205,7 @@ export function FinancePanel({
       { key: (t) => (t.type === "receita" ? "Receita" : "Despesa"), label: "Tipo" },
       { key: (t) => Number(t.amount).toFixed(2), label: "Valor" },
     ])
-    downloadCsv(`financeiro-${panel}-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+    downloadCsv(`financeiro-${panel}-${localDateISO()}.csv`, csv)
   }
 
   return (

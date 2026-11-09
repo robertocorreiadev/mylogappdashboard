@@ -21,6 +21,8 @@ import {
   transactionsForUserAllPanels, findTransactionById, insertTransaction, updateTransactionById, deleteTransactionById,
 } from "@/lib/db/scopes"
 import { recordAudit } from "@/lib/audit"
+import { isDeliveryStatus, parseDailyRecordForm, parseDeliveryForm, parseRecordId, parseTransactionForm } from "@/lib/forms"
+import { todayISOIn } from "@/lib/dates"
 import { panelLabel, PANEL_LABELS } from "@/lib/format"
 
 // Busca o alvo em QUALQUER organização (não restringe à org do admin) —
@@ -76,16 +78,10 @@ export async function adminGetTargetMemberData(targetUserId: number) {
 
 export async function adminSaveDailyRecord(organizationId: number, targetUserId: number, formData: FormData) {
   const admin = await requireAdmin()
-  const panel            = formData.get("panel")?.toString() || "jadlog"
-  const date              = formData.get("date")?.toString() || ""
-  const valuePerDelivery  = formData.get("valuePerDelivery")?.toString() || "3.50"
-  const delivered         = parseInt(formData.get("delivered")?.toString() || "0") || 0
-  const scheduled         = parseInt(formData.get("scheduled")?.toString() || "0") || 0
-  const occurrences       = parseInt(formData.get("occurrences")?.toString() || "0") || 0
-  const expensesRaw       = formData.get("expenses")?.toString() || ""
-  const expenses          = expensesRaw.trim() === "" ? "0" : expensesRaw
-
-  if (!date) return { error: "Selecione uma data." }
+  // D3: validação no servidor (lib/forms.ts) — erro volta como { error }.
+  const parsed = parseDailyRecordForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const { panel, date, valuePerDelivery, delivered, scheduled, occurrences, expenses } = parsed.value
 
   const existing = await findDailyRecord({ organizationId, userId: targetUserId, panel, date })
 
@@ -94,10 +90,13 @@ export async function adminSaveDailyRecord(organizationId: number, targetUserId:
       { organizationId, userId: targetUserId, id: existing.id },
       { valuePerDelivery, delivered, scheduled, occurrences, expenses, updatedAt: new Date() },
     )
-    await recordAudit({
-      organizationId, actorUserId: admin.id, entityType: "daily_record", entityId: existing.id,
-      action: "update", before: existing, after: updated,
-    })
+    // D9: só audita se o update devolveu a linha (mesma guarda da ação normal).
+    if (updated) {
+      await recordAudit({
+        organizationId, actorUserId: admin.id, entityType: "daily_record", entityId: existing.id,
+        action: "update", before: existing, after: updated,
+      })
+    }
   } else {
     const created = await insertDailyRecord({
       userId: targetUserId, organizationId, panel, date, valuePerDelivery, delivered, scheduled, occurrences, expenses,
@@ -127,28 +126,21 @@ export async function adminDeleteDailyRecord(organizationId: number, targetUserI
 
 export async function adminCreateDelivery(organizationId: number, targetUserId: number, formData: FormData) {
   const admin = await requireAdmin()
-  const panel        = formData.get("panel")?.toString() || "jadlog"
-  const trackingCode = formData.get("trackingCode")?.toString().trim() || ""
-  const recipient     = formData.get("recipient")?.toString().trim() || ""
-  const address       = formData.get("address")?.toString().trim() || null
-  const city          = formData.get("city")?.toString().trim() || null
-  const status        = formData.get("status")?.toString() || "pendente"
-  const valueRaw      = formData.get("value")?.toString() || ""
-  const value         = valueRaw.trim() === "" ? "0" : valueRaw
-  const deadline      = formData.get("deadline")?.toString() || null
-  if (!trackingCode || !recipient) throw new Error("Campos obrigatórios ausentes.")
-  const created = await insertDelivery({
-    userId: targetUserId, organizationId, panel, trackingCode, recipient, address, city, status, value, deadline: deadline || null,
-  })
+  // D3/D12: valida no servidor e devolve { error } em vez de lançar.
+  const parsed = parseDeliveryForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const created = await insertDelivery({ userId: targetUserId, organizationId, ...parsed.value })
   await recordAudit({
     organizationId, actorUserId: admin.id, entityType: "delivery", entityId: created.id,
     action: "create", before: null, after: created,
   })
   revalidatePath(`/gestor/entregadores/${targetUserId}`)
+  return { success: true }
 }
 
 export async function adminUpdateDeliveryStatus(organizationId: number, targetUserId: number, id: number, status: string) {
   const admin = await requireAdmin()
+  if (!isDeliveryStatus(status)) return
   const before = await findDeliveryById({ organizationId, userId: targetUserId, id })
   const after = await updateDeliveryStatusById({ organizationId, userId: targetUserId, id }, status)
   if (after) {
@@ -176,41 +168,36 @@ export async function adminDeleteDelivery(organizationId: number, targetUserId: 
 
 export async function adminCreateTransaction(organizationId: number, targetUserId: number, formData: FormData) {
   const admin = await requireAdmin()
-  const panel       = formData.get("panel")?.toString() || "jadlog"
-  const type        = formData.get("type")?.toString() || "receita"
-  const description = formData.get("description")?.toString().trim() || ""
-  const category    = formData.get("category")?.toString().trim() || null
-  const amountRaw    = formData.get("amount")?.toString() || ""
-  const amount       = amountRaw.trim() === "" ? "0" : amountRaw
-  const date         = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
-  if (!description) throw new Error("Descrição obrigatória.")
-  const created = await insertTransaction({ userId: targetUserId, organizationId, panel, type, description, category, amount, date })
+  // D2/D3/D12: valida no servidor; "hoje" no fuso de São Paulo; erro → { error }.
+  const parsed = parseTransactionForm(formData, todayISOIn())
+  if (!parsed.ok) return { error: parsed.error }
+  const created = await insertTransaction({ userId: targetUserId, organizationId, ...parsed.value })
   await recordAudit({
     organizationId, actorUserId: admin.id, entityType: "transaction", entityId: created.id,
     action: "create", before: null, after: created,
   })
   revalidatePath(`/gestor/entregadores/${targetUserId}`)
+  return { success: true }
 }
 
 export async function adminUpdateTransaction(organizationId: number, targetUserId: number, formData: FormData) {
   const admin = await requireAdmin()
-  const id          = parseInt(formData.get("id")?.toString() || "0")
-  const type        = formData.get("type")?.toString() || "receita"
-  const description = formData.get("description")?.toString().trim() || ""
-  const category    = formData.get("category")?.toString().trim() || null
-  const amount      = formData.get("amount")?.toString() || "0"
-  const date        = formData.get("date")?.toString() || new Date().toISOString().slice(0, 10)
-  if (!id || !description) throw new Error("Dados inválidos.")
+  const parsedId = parseRecordId(formData.get("id")?.toString() ?? "")
+  if (!parsedId.ok) return { error: parsedId.error }
+  const parsed = parseTransactionForm(formData, todayISOIn())
+  if (!parsed.ok) return { error: parsed.error }
+  const id = parsedId.value
+  const { type, description, category, amount, date } = parsed.value
 
   const before = await findTransactionById({ organizationId, userId: targetUserId, id })
   const after = await updateTransactionById({ organizationId, userId: targetUserId, id }, { type, description, category, amount, date })
-  if (after) {
-    await recordAudit({
-      organizationId, actorUserId: admin.id, entityType: "transaction", entityId: id,
-      action: "update", before: before ?? null, after,
-    })
-  }
+  if (!after) return { error: "Lançamento não encontrado." }
+  await recordAudit({
+    organizationId, actorUserId: admin.id, entityType: "transaction", entityId: id,
+    action: "update", before: before ?? null, after,
+  })
   revalidatePath(`/gestor/entregadores/${targetUserId}`)
+  return { success: true }
 }
 
 export async function adminDeleteTransaction(organizationId: number, targetUserId: number, id: number) {

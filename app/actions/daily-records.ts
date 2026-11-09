@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireEntregador } from "@/app/actions/auth"
 import { dailyRecordsForUser, findDailyRecord, insertDailyRecord, updateDailyRecordById, deleteDailyRecordById } from "@/lib/db/scopes"
 import { recordAudit } from "@/lib/audit"
+import { parseDailyRecordForm } from "@/lib/forms"
 
 export async function getDailyRecords(panel: string = "jadlog") {
   const { organizationId, user } = await requireEntregador()
@@ -12,17 +13,10 @@ export async function getDailyRecords(panel: string = "jadlog") {
 
 export async function saveDailyRecord(formData: FormData) {
   const { organizationId, user } = await requireEntregador()
-  const panel            = formData.get("panel")?.toString() || "jadlog"
-  const date              = formData.get("date")?.toString() || ""
-  const valuePerDelivery  = formData.get("valuePerDelivery")?.toString() || "3.50"
-  const delivered         = parseInt(formData.get("delivered")?.toString() || "0") || 0
-  const scheduled         = parseInt(formData.get("scheduled")?.toString() || "0") || 0
-  const occurrences       = parseInt(formData.get("occurrences")?.toString() || "0") || 0
-  // FIX: string vazia vira "0" para o banco não rejeitar o campo numeric
-  const expensesRaw       = formData.get("expenses")?.toString() || ""
-  const expenses          = expensesRaw.trim() === "" ? "0" : expensesRaw
-
-  if (!date) return { error: "Selecione uma data." }
+  // D3: validação no servidor (lib/forms.ts) — erro volta como { error }.
+  const parsed = parseDailyRecordForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const { panel, date, valuePerDelivery, delivered, scheduled, occurrences, expenses } = parsed.value
 
   const existing = await findDailyRecord({ organizationId, userId: user.id, panel, date })
 

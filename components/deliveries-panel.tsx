@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react"
 import { Plus, Trash2, Package, Download } from "lucide-react"
 import type { Delivery } from "@/lib/db/schema"
+import { FormError } from "@/components/form-error"
+import type { ActionResult } from "@/lib/forms"
+import { localDateISO } from "@/lib/dates"
 import { createDelivery, deleteDelivery, updateDeliveryStatus } from "@/app/actions/deliveries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +32,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, formatDate, statusLabel, STATUS_OPTIONS } from "@/lib/format"
 import { toCsv, downloadCsv } from "@/lib/csv"
 
-type CreateAction = (formData: FormData) => Promise<void>
+// D12: a action devolve { error } em vez de lançar; o form mostra o erro.
+type CreateAction = (formData: FormData) => Promise<ActionResult>
 type UpdateStatusAction = (id: number, status: string) => Promise<void>
 type DeleteAction = (id: number) => Promise<void>
 
@@ -53,10 +57,17 @@ export function DeliveriesPanel({
 }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit + preventDefault, não `action`: o React 19 limpa os campos depois
+  // de uma `action`, e com erro o usuário perderia o que digitou.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    setError(null)
     startTransition(async () => {
-      await onCreate(formData)
+      const res = await onCreate(formData)
+      if (res?.error) { setError(res.error); return }
       setOpen(false)
     })
   }
@@ -71,7 +82,7 @@ export function DeliveriesPanel({
       { key: (d) => Number(d.value).toFixed(2), label: "Valor" },
       { key: (d) => statusLabel(d.status), label: "Status" },
     ])
-    downloadCsv(`entregas-${panel}-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+    downloadCsv(`entregas-${panel}-${localDateISO()}.csv`, csv)
   }
 
   return (
@@ -86,7 +97,7 @@ export function DeliveriesPanel({
             </Button>
           )}
           {!readOnly && (
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setError(null) }}>
               <DialogTrigger
                 render={
                   <Button size="sm" className="gap-2">
@@ -100,7 +111,7 @@ export function DeliveriesPanel({
                   <DialogTitle>Nova entrega</DialogTitle>
                   <DialogDescription>Cadastre um novo pacote para acompanhamento.</DialogDescription>
                 </DialogHeader>
-                <form action={handleSubmit} className="grid gap-4">
+                <form onSubmit={handleSubmit} className="grid gap-4">
         <input type="hidden" name="panel" value={panel} />
                   <div className="grid gap-2">
                     <Label htmlFor="trackingCode">Código de rastreio</Label>
@@ -145,6 +156,7 @@ export function DeliveriesPanel({
                       </Select>
                     </div>
                   </div>
+                  <FormError message={error} />
                   <DialogFooter>
                     <Button type="submit" disabled={isPending}>
                       {isPending ? "Salvando..." : "Salvar entrega"}

@@ -3,6 +3,9 @@
 import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
+import { FormError } from "@/components/form-error"
+import type { ActionResult } from "@/lib/forms"
+import { localDateISO } from "@/lib/dates"
 import { recordGross, recordNet } from "@/lib/metrics"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
 import { Button } from "@/components/ui/button"
@@ -17,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, MONTHS, filterByPeriod } from "@/lib/format"
 import { toCsv, downloadCsv } from "@/lib/csv"
 
-type SaveAction = (formData: FormData) => Promise<{ error?: string; success?: boolean }>
+type SaveAction = (formData: FormData) => Promise<ActionResult>
 type DeleteAction = (id: number) => Promise<void>
 
 const DAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"]
@@ -66,7 +69,7 @@ function SummaryBar({ label, records, isAnnual = false }: { label: string; recor
 function RecordForm({
   initial, onClose, panel = "jadlog", onSave = saveDailyRecord,
 }: { initial?: Partial<DailyRecord>; onClose: () => void; panel?: string; onSave?: SaveAction }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateISO() // D2: data local, não UTC
   const [pending, startTransition] = useTransition()
   const [error, setError]          = useState<string | null>(null)
   const [deliveredStr, setDeliveredStr] = useState(String(initial?.delivered ?? ""))
@@ -81,7 +84,11 @@ function RecordForm({
   const expenses = parseFloat(expensesStr) || 0
   const tNet   = tGross - expenses
 
-  function handleSubmit(fd: FormData) {
+  // onSubmit + preventDefault, não `action`: o React 19 limpa os campos depois
+  // de uma `action`, e com erro o usuário perderia o que digitou.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
     setError(null)
     // Garante que o valor exato da string vai para o FormData
     fd.set("valuePerDelivery", vpdStr)
@@ -93,7 +100,7 @@ function RecordForm({
   }
 
   return (
-    <form action={handleSubmit} className="grid gap-5">
+    <form onSubmit={handleSubmit} className="grid gap-5">
       <input type="hidden" name="panel" value={panel} />
       {/* Valor por entrega */}
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-secondary/50 px-3 py-2.5">
@@ -193,7 +200,7 @@ function RecordForm({
         </div>
       </div>
 
-      {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{error}</p>}
+      <FormError message={error} />
 
       <DialogFooter>
         <Button type="submit" disabled={pending} className="w-full gap-2">
@@ -323,7 +330,7 @@ export function DailyRecordsPanel({
       { key: (r) => Number(r.expenses).toFixed(2), label: "Despesas" },
       { key: (r) => net(r).toFixed(2), label: "Faturamento Líquido" },
     ])
-    downloadCsv(`boletas-${panel}-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+    downloadCsv(`boletas-${panel}-${localDateISO()}.csv`, csv)
   }
 
   return (

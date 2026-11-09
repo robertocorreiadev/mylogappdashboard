@@ -330,7 +330,7 @@ liquido(r) = bruto(r) − Number(r.expenses)
 - `formatDate(v)`: `Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })`. `null` ou data inválida → `"—"`.
 - Mês é sempre índice 0–11. `MONTHS = ["Janeiro", …, "Dezembro"]`.
 - `filterByPeriod(items, year, month)`: `null` em ambos → tudo. Senão filtra pelo ano e/ou mês locais.
-- **[DEFEITO D2]**: o padrão "hoje" usa `new Date().toISOString().slice(0, 10)`, que é a data em UTC.
+- "Hoje" (`lib/dates.ts`): no cliente, `localDateISO()` (data local via `getFullYear`/`getMonth`/`getDate`); no servidor, `todayISOIn("America/Sao_Paulo")` (a Vercel roda em UTC). **Nunca** `toISOString().slice(0, 10)`: no Brasil, das 21:00 às 23:59 ela já é a data de amanhã.
 
 ---
 
@@ -483,31 +483,39 @@ Regras comuns a todas:
 - Toda escrita chama `recordAudit` **depois** de gravar, usando a linha devolvida por `.returning()`.
 - Depois de gravar: `revalidatePath("/dashboard")` e `revalidatePath("/panel2")`.
 
+
+**Validação no servidor (`lib/forms.ts`, todas as actions de escrita, normais e admin).** Erro → devolve `{ error: "<mensagem>" }`, **nunca** lança exceção nem deixa o Postgres responder com erro 500. Sucesso → `{ success: true }` (tipo `ActionResult`). O form mostra o erro no componente `FormError` (`components/form-error.tsx`, caixa vermelha com `role="alert"`) e continua aberto **com os campos preenchidos**: os forms usam `onSubmit` + `preventDefault`, não `action={fn}`, porque o React 19 limpa os campos depois de uma `action`.
+- Valor em R$ (`parseMoney`): vazio → `"0"`; aceita `"12,50"` (vírgula vira ponto), `".5"` (→ `"0.5"`) e `"3."` (→ `"3"`); ≥ 0, até 2 casas, abaixo de 100.000.000. Erro: `"{Campo}: informe um valor de 0 a 99.999.999,99, com até 2 casas decimais."`.
+- Quantidade (`parseCount`): vazio → 0; inteiro de 0 a 100.000. Erro: `"{Campo}: informe um número inteiro de 0 a 100.000."`.
+- Data (`parseISODate`): `AAAA-MM-DD` que existe no calendário. Erro: `"{Campo}: data inválida."`.
+- `panel` ∈ `PANEL_LABELS`, conferido com `Object.hasOwn` (não `in`, que aceita `"constructor"`) (`"Painel inválido."`); `status` ∈ `STATUS_OPTIONS` (`"Status inválido."`); `type` ∈ {`receita`, `despesa`} (`"Tipo inválido."`).
+- Textos com trim; no máximo 200 caracteres (endereço e descrição: 500). Erro: `"{Campo}: no máximo N caracteres."`.
+
 ### 9.1 Boleta (`app/actions/daily-records.ts`)
 
 - `getDailyRecords(panel = "jadlog")` → boletas do usuário naquele painel, da data mais nova para a mais velha.
 - `saveDailyRecord(fd)`. Campos:
   - `panel` (padrão `"jadlog"`);
-  - `date` (obrigatório: `{ error: "Selecione uma data." }`);
-  - `valuePerDelivery` (padrão `"3.50"`);
-  - `delivered`, `scheduled`, `occurrences` (`parseInt`; vazio ou inválido → 0);
-  - `expenses` (vazio → `"0"`).
+  - `date` (obrigatório: `{ error: "Selecione uma data." }`; formato inválido → `"Data: data inválida."`);
+  - `valuePerDelivery` (vazio → `"3.50"`; valor em R$);
+  - `delivered` (`"Entregas realizadas"`), `scheduled` (`"Agendadas sem sucesso"`), `occurrences` (`"Com ocorrência"`): quantidades;
+  - `expenses` (`"Despesas do dia"`): valor em R$.
 
-  Com o mesmo (organização, usuário, painel, data) já existente → `update` (+ `updatedAt = new Date()`) e auditoria `update`, só se o update devolveu linha. Senão → `insert` e auditoria `create`. Devolve `{ success: true }`. **[DEFEITO D3]**
+  Com o mesmo (organização, usuário, painel, data) já existente → `update` (+ `updatedAt = new Date()`) e auditoria `update`, só se o update devolveu linha. Senão → `insert` e auditoria `create`. Devolve `{ success: true }`.
 - `deleteDailyRecord(id)` → exclui dentro do escopo. Se excluiu, grava auditoria `delete`.
 
 ### 9.2 Rastreio (`app/actions/deliveries.ts`)
 
 - `getDeliveries(panel)` → entregas do painel, da criação mais nova para a mais velha.
 - `createDelivery(fd)`. Campos:
-  - `trackingCode` e `recipient` obrigatórios (com trim). Falta → **lança** `"Campos obrigatórios ausentes."` **[DEFEITO D12]**;
+  - `trackingCode` e `recipient` obrigatórios (com trim). Falta → `{ error: "Código de rastreio e destinatário são obrigatórios." }`;
   - `address` e `city` (vazio → `null`);
   - `status` (padrão `pendente`);
-  - `value` (vazio → `"0"`);
-  - `deadline` (vazio → `null`).
+  - `value` (`"Valor"`, valor em R$);
+  - `deadline` (`"Prazo"`; vazio → `null`).
 
-  Grava auditoria `create`.
-- `updateDeliveryStatus(id, status)` → lê o "antes", atualiza só o `status` e grava auditoria `update`.
+  Grava auditoria `create`. Devolve `{ success: true }`.
+- `updateDeliveryStatus(id, status)` → status fora de `STATUS_OPTIONS` → não faz nada (chamada forjada; a UI só oferece a lista). Senão lê o "antes", atualiza só o `status` e grava auditoria `update`.
 - `deleteDelivery(id)` → exclui e grava auditoria `delete`.
 
 ### 9.3 Financeiro (`app/actions/transactions.ts`)
@@ -515,13 +523,13 @@ Regras comuns a todas:
 - `getTransactions(panel)` → lançamentos do painel, da data mais nova para a mais velha.
 - `createTransaction(fd)`. Campos:
   - `type` (padrão `receita`);
-  - `description` obrigatória. Falta → **lança** `"Descrição obrigatória."`;
+  - `description` obrigatória. Falta → `{ error: "Descrição obrigatória." }`;
   - `category` (vazio → `null`);
-  - `amount` (vazio → `"0"`);
-  - `date` (vazio → hoje em UTC).
+  - `amount` (`"Valor"`, valor em R$);
+  - `date` (vazio → `todayISOIn("America/Sao_Paulo")`).
 
-  Grava auditoria `create`.
-- `updateTransaction(fd)` → precisa de `id` e de `description`. Falta um deles → lança `"Dados inválidos."`. Atualiza `type`, `description`, `category`, `amount` e `date`. Grava auditoria `update`.
+  Grava auditoria `create`. Devolve `{ success: true }`.
+- `updateTransaction(fd)` → mesmas regras, mais `id` inteiro positivo (`parseRecordId`; senão `{ error: "Lançamento inválido." }`). Update que não acha a linha no escopo (excluída em outra aba, ou id de outro usuário) → `{ error: "Lançamento não encontrado." }`, sem auditoria. Atualiza `type`, `description`, `category`, `amount` e `date`. Grava auditoria `update`.
 - `deleteTransaction(id)` → exclui e grava auditoria `delete`.
 
 ### 9.4 Gestor (`app/actions/gestor.ts`)
@@ -556,9 +564,10 @@ Regras comuns a todas:
   - devolve `{ member, organizationId, orgName (nulo vira "—"), panels }`, ou `null`.
 - `adminSaveDailyRecord`, `adminDeleteDailyRecord`, `adminCreateDelivery`, `adminUpdateDeliveryStatus`, `adminDeleteDelivery`, `adminCreateTransaction`, `adminUpdateTransaction`, `adminDeleteTransaction`:
   - recebem `(organizationId, targetUserId, ...)` antes dos argumentos das ações normais;
-  - repetem as mesmas regras, mas gravam a auditoria com `actorUserId = admin`;
+  - repetem as mesmas regras e a mesma validação (`lib/forms.ts`), mas gravam a auditoria com `actorUserId = admin`;
   - chamam `revalidatePath("/gestor/entregadores/{targetUserId}")`;
-  - **nunca** reaproveitam nem alteram as ações normais. **[DEFEITO D9]**
+  - **nunca** reaproveitam nem alteram as ações normais;
+  - `adminSaveDailyRecord` só grava a auditoria de `update` se o update devolveu linha (igual à ação normal).
 - `adminDeleteAuditLogEntry(id)`:
   - entrada inexistente → `{ error: "Registro não encontrado." }`;
   - senão apaga a entrada e grava uma auditoria `{ entityType: "audit_log_entry", entityId: id, action: "delete", before: entrada }` na organização dela;
@@ -591,6 +600,8 @@ Regras comuns a todas:
 10.1 `lib/db/index.ts`: `pool = new Pool({ connectionString: DATABASE_URL })` e `db = drizzle(pool, { schema })`.
 
 10.2 `lib/format.ts`: `formatCurrency`, `formatDate`, `MONTHS`, `filterByPeriod`, `STATUS_OPTIONS`, `statusLabel`, `PANEL_LABELS` e `panelLabel` (§5).
+
+10.3b `lib/forms.ts`: parsers de formulário das actions de escrita (§9, "Validação no servidor"). `lib/dates.ts`: `localDateISO` e `todayISOIn` (§5; `todayISOIn` monta AAAA-MM-DD com `formatToParts`, sem depender do padrão de data de um locale).
 
 10.3a `lib/google-link.ts`: `isEmailAuthoritative(profile)` e `decideGoogleLink(googleId, byGoogleId, byEmail, emailAuthoritative)` → `use` | `link` | `create` | `reject` (`google_unverified` ou `google_conflict`). Funções puras, sem banco (§6.5). `lib/google-auth.ts`: `loginWithGoogle` (§6.5).
 
@@ -740,7 +751,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 | Rótulo | Ícone | Input | Regra |
 |---|---|---|---|
 | `"Valor por entrega (R$)"` + dica `"← altere se o valor mudar"` | `Settings` | texto, `inputMode="decimal"`, `pattern="[0-9]*[.,]?[0-9]*"` | padrão `"3.50"` (ou o valor gravado com 2 casas); vírgula vira ponto ao digitar; obrigatório |
-| `"Data"` | `Calendar` | `type="date"`, obrigatório | padrão hoje **[DEFEITO D2]** ou a data gravada |
+| `"Data"` | `Calendar` | `type="date"`, obrigatório | padrão hoje (`localDateISO()`) ou a data gravada |
 | `"Entregas realizadas"` | `CheckCircle2` | `number`, `min 0`, `step 1`, `placeholder "0"` | — |
 | `"Agendadas (sem sucesso)"` | `Clock` | `number`, `min 0` | padrão 0 |
 | `"Com ocorrência"` | `AlertTriangle` | `number`, `min 0` | padrão 0 |
@@ -1027,7 +1038,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **58/58**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **86/86**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
@@ -1035,6 +1046,8 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
 | `lib/google-link.test.ts` | `isEmailAuthoritative`: @gmail.com verificado; Workspace com `hd` igual ao domínio; recusa conta comum de outro domínio, `hd` diferente, não verificado e `verified_email` que não é `true`. `decideGoogleLink`: usa a conta do `google_id`; liga pelo e-mail autoritativo; recusa e-mail não autoritativo (ligar e criar); recusa conta já ligada a outro `google_id`; cria conta nova |
+| `lib/forms.test.ts` | `parseMoney` (ponto e vírgula, vazio → 0, recusa negativo, texto, 3 casas, notação científica e valor grande); `parseCount` (inteiro ≥ 0, vazio → 0, recusa negativo, decimal, texto e acima do limite); `parseISODate` (válida; recusa formato errado e data inexistente); `parseDailyRecordForm`, `parseDeliveryForm` e `parseTransactionForm` (normalização, padrões, mensagens, painel/status/tipo inválidos, id na edição, 'hoje' recebido) |
+| `lib/dates.test.ts` | `localDateISO` usa a data local (23:30 continua o mesmo dia) e preenche com 2 dígitos; `todayISOIn` em São Paulo antes e depois das 03:00 UTC |
 | `lib/metrics.test.ts` | `recordGross`; `recordNet` (normal e negativo); `netByQuinzena`: null sem boletas; dia 15 vai para a 1ª e dia 16 para a 2ª; mês de referência na virada do ano; ignora outros meses; `lastDay`; 2ª quinzena vazia; `days` conta datas distintas; valor negativo; soma das quinzenas = líquido do mês |
 | `lib/db/scopes.test.ts` | **teste de arquitetura**: nenhum arquivo `app/actions/*.ts` contém `.from(T)`, `db.update(T)`, `db.delete(T)` ou `db.insert(T)` para `T` ∈ {`dailyRecords`, `deliveries`, `transactions`} |
 
@@ -1079,19 +1092,15 @@ Para chamar uma entrega de "pronta", todos estes passos DEVEM passar:
 
 Reconstruir **sem** estes defeitos. Para corrigir no sistema atual, abrir uma tarefa própria para cada um.
 
-Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
+Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D2** (data "hoje" em UTC), **D3** (validação no servidor), **D9** (auditoria do `adminSaveDailyRecord`), **D12** (actions lançavam exceção), **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
 
 | ID | Onde | Defeito | Correção |
 |---|---|---|---|
-| D2 | `RecordForm` e `TransactionForm`, `createTransaction`/`updateTransaction` e equivalentes admin, nomes dos CSV | "Hoje" calculado em UTC. No Brasil (UTC−3), das 21:00 às 23:59 o padrão é a data de **amanhã**. | Montar `AAAA-MM-DD` com `getFullYear`, `getMonth` e `getDate` locais. |
-| D3 | `saveDailyRecord`, `createDelivery`, `createTransaction`, `updateTransaction` e equivalentes admin | Sem validação numérica no servidor. Aceita valor negativo, e um texto não numérico gera erro 500 do Postgres. | Validar no servidor e devolver `{ error }`. |
 | D6 | `app/gestor/page.tsx` | Os cartões do topo somam os dois painéis, contra a regra de nunca somar painéis. | Mostrar só a composição por painel, ou cartões por painel. |
 | D7 | `listPendingInvites` | Lista convites **vencidos** como pendentes. | Filtrar com `expires_at > now()`, ou marcá-los como vencidos. |
 | D8 | `UsersPanel`, modal de exclusão | O texto diz que apaga tudo, mas a exclusão é bloqueada (FK) para quase todos os usuários reais. | Ajustar o texto ou o fluxo. |
-| D9 | `adminSaveDailyRecord` | Grava a auditoria de `update` sem conferir se o update devolveu uma linha. A ação normal confere. | Mesma guarda `if (updated)`. |
 | D10 | `/gestor/auditoria` | O admin só vê e exclui entradas da organização em que **ele** é gestor. Sem papel gestor, vai para `/select`. | Decidir se o admin deve ter uma auditoria global. |
 | D11 | Tema do Painel 2 | Os modais renderizam num portal em `<body>`, fora do `[data-panel]`. Por isso ficam com a cor de marca (índigo) no Painel 2. Deduzido do código; não conferido na tela. | Aplicar `data-panel` no `<html>` ou no `<body>`. |
-| D12 | `createDelivery`, `createTransaction`, `updateTransaction` | Em erro de validação **lançam** exceção em vez de devolver `{ error }`. A UI não tem onde mostrar o erro. | Devolver `{ error }` e mostrar no form. |
 | D13 | `RecordRow`, `DeliveryRow`, `TransactionRow` | Excluir não pede confirmação. | Pedir confirmação. |
 | D15 | `app/globals.css`, tema claro | Com `data-theme="light"`, os tokens resolvem certo (`getComputedStyle`: `--background = #f4f5f8`), mas o fundo calculado de `<html>`/`<body>` não muda. Suspeita: alguma regra de `shadcn/tailwind.css` ganha a cascata. Registrado no `TODO.md`. Não afeta hoje, porque não há botão para trocar de tema. | Investigar antes de criar o botão de tema. |
 

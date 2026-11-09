@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireEntregador } from "@/app/actions/auth"
 import { deliveriesForUser, findDeliveryById, insertDelivery, updateDeliveryStatusById, deleteDeliveryById } from "@/lib/db/scopes"
 import { recordAudit } from "@/lib/audit"
+import { isDeliveryStatus, parseDeliveryForm } from "@/lib/forms"
 
 export async function getDeliveries(panel: string = "jadlog") {
   const { organizationId, user } = await requireEntregador()
@@ -12,29 +13,22 @@ export async function getDeliveries(panel: string = "jadlog") {
 
 export async function createDelivery(formData: FormData) {
   const { organizationId, user } = await requireEntregador()
-  const panel        = formData.get("panel")?.toString() || "jadlog"
-  const trackingCode = formData.get("trackingCode")?.toString().trim() || ""
-  const recipient     = formData.get("recipient")?.toString().trim() || ""
-  const address       = formData.get("address")?.toString().trim() || null
-  const city          = formData.get("city")?.toString().trim() || null
-  const status        = formData.get("status")?.toString() || "pendente"
-  const valueRaw      = formData.get("value")?.toString() || ""
-  const value         = valueRaw.trim() === "" ? "0" : valueRaw
-  const deadline      = formData.get("deadline")?.toString() || null
-  if (!trackingCode || !recipient) throw new Error("Campos obrigatórios ausentes.")
-  const created = await insertDelivery({
-    userId: user.id, organizationId, panel, trackingCode, recipient, address, city, status, value, deadline: deadline || null,
-  })
+  // D3/D12: valida no servidor e devolve { error } em vez de lançar.
+  const parsed = parseDeliveryForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const created = await insertDelivery({ userId: user.id, organizationId, ...parsed.value })
   await recordAudit({
     organizationId, actorUserId: user.id, entityType: "delivery", entityId: created.id,
     action: "create", before: null, after: created,
   })
   revalidatePath("/dashboard")
   revalidatePath("/panel2")
+  return { success: true }
 }
 
 export async function updateDeliveryStatus(id: number, status: string) {
   const { organizationId, user } = await requireEntregador()
+  if (!isDeliveryStatus(status)) return // a UI só oferece a lista; outro valor é chamada forjada
   const before = await findDeliveryById({ organizationId, userId: user.id, id })
   const after = await updateDeliveryStatusById({ organizationId, userId: user.id, id }, status)
   if (after) {

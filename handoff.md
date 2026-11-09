@@ -34,8 +34,9 @@ todas as correções e débitos. Nada pendente da faixa de quinzenas.
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail
 autoritativo; não deu para testar o fluxo real aqui, exige credenciais).
-Entrar com uma conta já ligada e conferir que segue funcionando. Depois:
-D2 e D3 da spec (§15).
+Entrar com uma conta já ligada e conferir que segue funcionando. Conferir
+também um salvamento normal de boleta, entrega e lançamento (validação nova
+no servidor, D3). Depois: defeitos restantes da §15.
 Branches antigas apagadas em 2026-11-09 (local e GitHub): só resta `main`.
 
 O commit local
@@ -53,9 +54,9 @@ rotas, actions, telas com textos exatos, tema e testes. Os prompts antigos
 (`DASHBOARD PROMPT.txt` v1 e `v2.txt`) e o schema inicial (`SQL FUNC.txt`)
 estão em `docs/historico/`. Commitados em 2026-11-09.
 - Toda mudança de comportamento DEVE atualizar a spec no mesmo commit.
-- Defeitos abertos na §15 (D1, D4, D5, D14 e D16 já corrigidos em 2026-11-09).
-  Prioridade: D2 (data padrão em UTC) e D3 (sem validação numérica no
-  servidor).
+- Defeitos abertos na §15: D6, D7, D8, D10, D11, D13 e D15 (D1–D5, D9,
+  D12, D14 e D16 corrigidos em 2026-11-09). D6, D8 e D10 pedem decisão do
+  dono; D7, D11 e D13 são correções diretas.
 - Decisões do dono: Q1–Q3 na §16.
 
 ## 🎯 Próxima tarefa principal
