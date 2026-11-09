@@ -1,7 +1,41 @@
 import { Truck, TrendingUp, TrendingDown, Wallet, Package } from "lucide-react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, MONTHS } from "@/lib/format"
+import { netByQuinzena, type QuinzenaSplit } from "@/lib/metrics"
+
+function netColor(value: number, days: number) {
+  if (!days) return "text-muted-foreground"
+  return value >= 0 ? "text-[var(--chart-2)]" : "text-destructive"
+}
+
+// Faixa "Quinzenas" dentro do card de líquido: 1ª = dias 01–15,
+// 2ª = dia 16 até o último dia com boleta do mês de referência.
+function QuinzenaStrip({ q }: { q: QuinzenaSplit }) {
+  const halves = [
+    { label: "1ª quinzena", ...q.first, range: "01–15" },
+    {
+      label: "2ª quinzena", ...q.second,
+      range: q.second.lastDay === null ? "sem registros" : `16–${String(q.second.lastDay).padStart(2, "0")}`,
+    },
+  ]
+  return (
+    <div className="mx-4 -mt-2 border-t border-border pt-2">
+      <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Quinzenas · {MONTHS[q.month].slice(0, 3)}/{q.year}
+      </p>
+      <div className="grid grid-cols-2 divide-x divide-border">
+        {halves.map((h, i) => (
+          <div key={h.label} className={i === 0 ? "pr-2" : "pl-2"} title={`${h.days} ${h.days === 1 ? "dia" : "dias"} com boleta`}>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{h.label}</p>
+            <p className={`whitespace-nowrap text-sm font-semibold tabular-nums ${netColor(h.net, h.days)}`}>{formatCurrency(h.net)}</p>
+            <p className="text-[10px] text-muted-foreground">{h.range}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function StatsOverview({
   deliveries, transactions, dailyRecords, periodLabel,
@@ -22,10 +56,12 @@ export function StatsOverview({
   const despesa = transactions.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
   const saldo   = receita - despesa
 
+  const quinzenas = netByQuinzena(dailyRecords)
+
   const cards = [
     { label: "Entregas realizadas", value: String(totalDelivered), hint: `${workDays} dias trabalhados`, icon: Truck, color: "text-primary" },
     { label: "Fat. bruto acumulado", value: formatCurrency(totalGross), hint: `Despesas: ${formatCurrency(totalExpDR)}`, icon: TrendingUp, color: "text-[var(--chart-2)]" },
-    { label: "Fat. líquido acumulado", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
+    { label: "Fat. líquido acumulado", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive", split: true },
     { label: "Rastreio (total)", value: String(deliveries.length), hint: `${deliveries.filter(d => d.status === "pendente" || d.status === "em_transito").length} em aberto`, icon: Package, color: "text-[var(--chart-4)]" },
     { label: "Saldo financeiro", value: formatCurrency(saldo), hint: saldo >= 0 ? "Positivo" : "Negativo", icon: saldo >= 0 ? TrendingUp : TrendingDown, color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
   ]
@@ -39,7 +75,7 @@ export function StatsOverview({
       )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {cards.map(c => (
-          <Card key={c.label}>
+          <Card key={c.label} className={c.split ? "col-span-2 lg:col-span-1" : undefined}>
             <CardContent className="flex items-start justify-between gap-2 p-4">
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.label}</p>
@@ -50,6 +86,7 @@ export function StatsOverview({
               </div>
               <c.icon className={`h-5 w-5 shrink-0 ${c.color}`} aria-hidden="true" />
             </CardContent>
+            {c.split && quinzenas && <QuinzenaStrip q={quinzenas} />}
           </Card>
         ))}
       </div>

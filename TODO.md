@@ -276,6 +276,36 @@ compartilhados (`requireGestor`/`requireMembership` em
 melhor feito como uma mudança deliberada e revisada à parte do que
 espremido no fim desta revisão.
 
+## Líquido por quinzena no card de KPI (2026-11-09)
+- [x] `lib/metrics.ts` (novo): `recordNet()` (bruto − despesas da boleta) e
+      `netByQuinzena()` — 1ª quinzena = dias 01–15; 2ª = dia 16 até o último
+      dia com boleta. Data lida como texto `YYYY-MM-DD` (sem fuso).
+      **Mês de referência** = mês da boleta mais recente do conjunto que o
+      card recebe (que já segue o filtro ano/mês da aba ativa): sem filtro →
+      último mês trabalhado; mês+ano → esse mês; só ano → último mês do ano;
+      só mês → esse mês no ano mais recente; sem boletas → faixa oculta.
+- [x] `lib/metrics.test.ts`: 10 testes (limite 15/16, virada de ano, outros
+      meses excluídos, `lastDay`, 2ª vazia, negativo, soma = mês).
+- [x] `components/stats-overview.tsx`: faixa "Quinzenas · Mmm/AAAA" dentro
+      do card "Fat. líquido acumulado" (decisão do usuário: não criar cards
+      soltos — a grade continua com 5). No celular o card líquido ocupa a
+      linha inteira (`col-span-2 lg:col-span-1`). Vale para entregador,
+      `/gestor` e drill-down, porque todos usam o mesmo componente.
+      Testado: `tsc --noEmit` limpo (só o artefato stale conhecido),
+      `npm test` 44/44, smoke test — `/dashboard` (Nov/2026: R$ 368,00 = resumo
+      do mês; filtro Outubro: R$ 958,00 + R$ 978,00 = R$ 1.936,00, faixa
+      16–30), largura 375px (grade 2+1+2, sem texto vazando), `/gestor`,
+      `/gestor/entregadores/1` e `/4` (o 4 mostra Ago/2026 = último mês dele),
+      `/2` e `/8` sem boletas → faixa oculta.
+- [ ] Débito técnico (não feito de propósito): `daily-records-panel.tsx`,
+      `overview-panel.tsx` e `app/gestor/page.tsx` repetem a fórmula do
+      líquido — migrar para `recordNet()` numa tarefa própria.
+- [ ] Achado pré-existente: o drill-down `/gestor/entregadores/[id]`
+      renderiza a linha de KPIs **duas vezes** (`member-panel-tabs.tsx`
+      chama `StatsOverview` e o `DashboardTabs` interno também).
+- [ ] Achado pré-existente: em 375px o cabeçalho (botão "Sair") passa da
+      largura da tela e gera rolagem horizontal.
+
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via
   SQL manual no Neon SQL Editor (ver `migrate-unique-fix.sql` como exemplo).

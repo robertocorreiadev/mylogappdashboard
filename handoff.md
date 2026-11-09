@@ -1,10 +1,43 @@
 # Handoff — MyLog Multi-Tenant
 
-Última atualização: 2026-09-25 (sessão de aprimoramento + design system,
-worktree `worktree-mylog-p0-design-system`). Se esta sessão for
-interrompida, leia este arquivo primeiro, depois `TODO.md` (histórico
-detalhado por fase e da revisão) e o plano original em
+Última atualização: 2026-11-09. Se esta sessão for interrompida, leia este
+arquivo primeiro, depois `TODO.md` (histórico detalhado por fase e da
+revisão) e o plano original em
 `C:\Users\IOT DEXTER\.claude\plans\vamos-arquitetar-um-sistema-mutable-quail.md`.
+
+## ✅ Líquido por quinzena — implementado (2026-11-09), commit + push feitos
+
+O card "Fat. líquido acumulado" ganhou a faixa "Quinzenas · Mmm/AAAA" com
+**1ª quinzena** (dias 01–15) e **2ª quinzena** (16 até o último dia com
+boleta), em R$. Cálculo em `lib/metrics.ts` (`netByQuinzena`), testes em
+`lib/metrics.test.ts`, UI em `components/stats-overview.tsx`. Regra do mês
+de referência, testes e achados: seção "Líquido por quinzena" do `TODO.md`.
+Plano: `C:\Users\IOT DEXTER\.claude\plans\majestic-dancing-crystal.md`.
+
+Verificado: `tsc --noEmit` limpo (só artefato stale), `npm test` 44/44,
+smoke test no navegador (valores batem com o resumo mensal da tabela).
+Commit `feat: líquido por quinzena no card de KPI` enviado para
+`origin/main` em 2026-11-09, em cima do merge do PR #1 (`875c4c6`:
+design system + CI + consolidação de auth `35235bd`). O commit local
+`bcda5e7` fazia a mesma consolidação de auth em paralelo e nunca foi
+enviado; saiu do `main` em favor da versão do PR e ficou guardado no
+branch local `backup/auth-consolidacao-local`. **Próximo passo:** conferir o deploy na Vercel e
+escolher um item do `TODO.md` (débito de `recordNet()`, KPIs duplicados no
+drill-down, cabeçalho estourando em 375px).
+
+## Auditoria do prompt do painel (2026-11-09)
+
+`..\DASHBOARD PROMPT.txt` (v1) foi auditado contra o código. Resultado em
+`..\DASHBOARD PROMPT v2.txt` (descrição determinística, IDs R-xx).
+Pendências abertas pela auditoria (nada foi corrigido no código):
+- D1 `app/api/auth/google/callback/route.ts`: liga conta por e-mail sem
+  checar `verified_email` (segurança).
+- D2 `components/daily-records-panel.tsx` `RecordForm`: data padrão via
+  `toISOString()` = UTC; das 21:00 às 23:59 abre com a data de amanhã.
+- D3 `app/actions/daily-records.ts`: sem validação numérica no servidor.
+- W1 faixa de quinzenas (`lib/metrics.ts` + `components/stats-overview.tsx`):
+  resolvido — commit + push em 2026-11-09 (seção acima).
+- Decisões do dono: Q1–Q3 na seção 8 do v2.
 
 ## 🎯 Próxima tarefa principal
 
