@@ -342,6 +342,15 @@ espremido no fim desta revisão.
       deploy próprio quando um mais novo chega. A API de deployments do
       GitHub demorou a refletir — conferir no painel da Vercel, não só nela.
 
+## Base de teste de pior caso (decisão do usuário, 2026-11-09)
+- [ ] Criar um usuário/organização de teste "estressado" no banco de dev
+      para todo smoke test cair nos piores casos sem esforço: valores
+      grandes (R$ 100.000+ no mês), vários entregadores e os dois painéis
+      na mesma data, mês com líquido negativo, mês com só a 1ª ou só a 2ª
+      quinzena, só o dia 16, virada de ano. Origem: observation 0029 do
+      task-observer (a revisão achou defeitos que o smoke test com dados
+      comuns não pegou). Script de seed no repo, nunca com credencial real.
+
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via
   SQL manual no Neon SQL Editor (ver `migrate-unique-fix.sql` como exemplo).
