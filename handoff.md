@@ -18,7 +18,15 @@ Verificado: `tsc --noEmit` limpo (só artefato stale), `npm test` 44/44,
 smoke test no navegador (valores batem com o resumo mensal da tabela).
 Commit `feat: líquido por quinzena no card de KPI` enviado para
 `origin/main` em 2026-11-09, em cima do merge do PR #1 (`875c4c6`:
-design system + CI + consolidação de auth `35235bd`). O commit local
+design system + CI + consolidação de auth `35235bd`).
+
+**⏭️ Próxima sessão — começar por aqui:** revisão de código da faixa de
+quinzenas (etapa 5 do dev-pipeline, adiada a pedido do usuário em
+2026-11-09): `/code-review` no commit `4ce4b63` + revisão de segurança.
+Arquivos: `lib/metrics.ts`, `lib/metrics.test.ts`,
+`components/stats-overview.tsx`. Também conferir o deploy na Vercel.
+
+O commit local
 `bcda5e7` fazia a mesma consolidação de auth em paralelo e nunca foi
 enviado; saiu do `main` em favor da versão do PR e ficou guardado no
 branch local `backup/auth-consolidacao-local`. **Próximo passo:** conferir o deploy na Vercel e
