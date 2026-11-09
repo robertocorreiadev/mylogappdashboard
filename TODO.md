@@ -297,14 +297,42 @@ espremido no fim desta revisão.
       16–30), largura 375px (grade 2+1+2, sem texto vazando), `/gestor`,
       `/gestor/entregadores/1` e `/4` (o 4 mostra Ago/2026 = último mês dele),
       `/2` e `/8` sem boletas → faixa oculta.
-- [ ] Débito técnico (não feito de propósito): `daily-records-panel.tsx`,
-      `overview-panel.tsx` e `app/gestor/page.tsx` repetem a fórmula do
-      líquido — migrar para `recordNet()` numa tarefa própria.
-- [ ] Achado pré-existente: o drill-down `/gestor/entregadores/[id]`
-      renderiza a linha de KPIs **duas vezes** (`member-panel-tabs.tsx`
-      chama `StatsOverview` e o `DashboardTabs` interno também).
+- [x] Revisão de código do `4ce4b63` (etapa 5, 2026-11-09): `/code-review`
+      em contexto limpo + revisão de segurança manual (G3; o `/security-review`
+      não tinha diff pendente). Segurança: sem achados (sem segredo, injeção,
+      chamada nova, mudança de auth ou dependência). Defeitos corrigidos:
+  - [x] Valor cortado no `lg` (card com 1/5 da largura + `overflow-hidden`
+        do Card): no `lg` as quinzenas empilham. Testado com
+        "-R$ 123.456,78" em 1024px e 375px, sem corte.
+  - [x] KPIs duplicados no drill-down: `member-panel-tabs.tsx` não chama
+        mais `StatsOverview`; fica só o do `DashboardTabs`, que segue o
+        filtro (antes uma faixa mostrava Out e a outra Nov). Testado:
+        `/gestor/entregadores/4` com filtro Julho → 1 faixa, Jul/2026,
+        R$ 99,00 + R$ 189,00 = R$ 288,00 (= card).
+  - [x] "N dias com boleta" contava boletas, não datas (no `/gestor` a
+        mesma data tem uma boleta por entregador/painel): agora conta datas
+        distintas. Teste novo em `lib/metrics.test.ts` (45/45).
+  - [x] Estado vazio igual nas duas metades ("sem registros"); 2ª quinzena
+        só com o dia 16 mostra "16", não "16–16".
+- Decisões do usuário (2026-11-09), sem mudança de código:
+  - Período com vários meses (ex.: filtro só de ano): a faixa continua
+    mostrando o último mês; o rótulo "Mmm/AAAA" indica qual.
+  - Boleta com data futura continua valendo como mês de referência: datas
+    futuras podem ser usadas para **simulação**. Ideia, se virar uso real:
+    marcar a boleta como "simulação" e deixar o usuário incluir ou não nos
+    totais (não bloquear data futura no formulário).
+- [ ] Débito técnico (não feito de propósito): a fórmula do líquido está
+      escrita à mão em `stats-overview.tsx:49–51`, `app/gestor/page.tsx`
+      (2 lugares), `overview-panel.tsx` e `daily-records-panel.tsx` —
+      migrar para `recordNet()` numa tarefa própria. Risco: se a regra
+      mudar e um lugar ficar para trás, total e quinzenas divergem.
+- [ ] Débito técnico: `dashboard-tabs.tsx` refaz `filterByPeriod` e
+      `netByQuinzena` a cada render (sem `useMemo`). Sem efeito com o
+      volume atual; fazer se houver lentidão ou junto com o débito acima.
 - [ ] Achado pré-existente: em 375px o cabeçalho (botão "Sair") passa da
-      largura da tela e gera rolagem horizontal.
+      largura da tela e gera rolagem horizontal (`dashboard-header.tsx`,
+      grupo de botões em `flex` sem quebra). Obs.: no `/gestor` em 375px
+      não houve rolagem no teste de 2026-11-09; conferir em `/dashboard`.
 
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via

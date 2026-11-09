@@ -2,7 +2,6 @@
 
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { StatsOverview } from "@/components/stats-overview"
 import { DashboardTabs, type PanelActions } from "@/components/dashboard-tabs"
 
 type PanelData = {
@@ -28,7 +27,7 @@ export function MemberPanelTabs({ panels, actions }: { panels: PanelData[]; acti
       </TabsList>
       {panels.map((p) => (
         <TabsContent key={p.panel} value={p.panel}>
-          <StatsOverview deliveries={p.deliveries} transactions={p.transactions} dailyRecords={p.dailyRecords} />
+          {/* A linha de KPIs vem do DashboardTabs, que acompanha o filtro de período. */}
           <DashboardTabs
             deliveries={p.deliveries}
             transactions={p.transactions}

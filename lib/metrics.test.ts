@@ -55,6 +55,16 @@ describe("netByQuinzena", () => {
     expect(q?.second).toEqual({ net: 0, days: 0, lastDay: null })
   })
 
+  it("days conta datas distintas, não boletas (visão do gestor junta entregadores)", () => {
+    const q = netByQuinzena([
+      rec("2026-11-03", 1, "10"), rec("2026-11-03", 2, "10"), rec("2026-11-03", 3, "10"),
+      rec("2026-11-04", 1, "10"),
+      rec("2026-11-20", 1, "10"), rec("2026-11-20", 1, "10"),
+    ])
+    expect(q?.first).toEqual({ net: 70, days: 2 })
+    expect(q?.second).toEqual({ net: 20, days: 1, lastDay: 20 })
+  })
+
   it("mantém líquido negativo", () => {
     const q = netByQuinzena([rec("2026-11-04", 1, "5", "30")])
     expect(q?.first.net).toBe(-25)

@@ -20,11 +20,14 @@ Commit `feat: líquido por quinzena no card de KPI` enviado para
 `origin/main` em 2026-11-09, em cima do merge do PR #1 (`875c4c6`:
 design system + CI + consolidação de auth `35235bd`).
 
-**⏭️ Próxima sessão — começar por aqui:** revisão de código da faixa de
-quinzenas (etapa 5 do dev-pipeline, adiada a pedido do usuário em
-2026-11-09): `/code-review` no commit `4ce4b63` + revisão de segurança.
-Arquivos: `lib/metrics.ts`, `lib/metrics.test.ts`,
-`components/stats-overview.tsx`. Também conferir o deploy na Vercel.
+Revisão de código + segurança feita em 2026-11-09: 4 defeitos corrigidos
+(valor cortado no `lg`, KPIs duplicados no drill-down, contagem de dias,
+estado vazio) — detalhe no `TODO.md`. Regra de QA do projeto agora no
+`CLAUDE.md`.
+
+**⏭️ Próxima sessão — começar por aqui:** conferir o deploy na Vercel.
+Depois, os débitos da seção "Líquido por quinzena" do `TODO.md`
+(`recordNet()` nos 5 lugares, `useMemo`, botão "Sair" em 375px).
 
 O commit local
 `bcda5e7` fazia a mesma consolidação de auth em paralelo e nunca foi

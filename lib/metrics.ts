@@ -11,9 +11,9 @@ export type QuinzenaSplit = {
   year: number
   /** 0–11, mesmo índice de MONTHS em lib/format.ts. */
   month: number
-  /** Dias 01–15. */
+  /** Dias 01–15. `days` = datas distintas com boleta. */
   first: { net: number; days: number }
-  /** Dia 16 até o último dia com boleta (lastDay); null se não houver. */
+  /** Dia 16 até o último dia com boleta (lastDay); null se não houver. `days` = datas distintas. */
   second: { net: number; days: number; lastDay: number | null }
 }
 
@@ -37,19 +37,26 @@ export function netByQuinzena(records: NetInput[]): QuinzenaSplit | null {
     second: { net: 0, days: 0, lastDay: null },
   }
 
+  // `days` = datas distintas: na visão do gestor a mesma data tem uma boleta
+  // por entregador e por painel.
+  const firstDays = new Set<number>()
+  const secondDays = new Set<number>()
+
   for (const r of records) {
     if (r.date.slice(0, 7) !== ym) continue
     const day = Number(r.date.slice(8, 10))
     const n = recordNet(r)
     if (day <= 15) {
       result.first.net += n
-      result.first.days += 1
+      firstDays.add(day)
     } else {
       result.second.net += n
-      result.second.days += 1
+      secondDays.add(day)
       if (result.second.lastDay === null || day > result.second.lastDay) result.second.lastDay = day
     }
   }
 
+  result.first.days = firstDays.size
+  result.second.days = secondDays.size
   return result
 }

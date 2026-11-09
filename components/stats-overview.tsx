@@ -9,27 +9,36 @@ function netColor(value: number, days: number) {
   return value >= 0 ? "text-[var(--chart-2)]" : "text-destructive"
 }
 
+function secondRange(lastDay: number | null) {
+  if (lastDay === null) return ""
+  return lastDay === 16 ? "16" : `16–${String(lastDay).padStart(2, "0")}`
+}
+
 // Faixa "Quinzenas" dentro do card de líquido: 1ª = dias 01–15,
 // 2ª = dia 16 até o último dia com boleta do mês de referência.
+// Quinzena sem boleta mostra "sem registros" nas duas metades, do mesmo jeito.
+// No lg o card tem 1/5 da largura: as metades empilham para o valor não ser
+// cortado (o Card tem overflow-hidden).
 function QuinzenaStrip({ q }: { q: QuinzenaSplit }) {
   const halves = [
     { label: "1ª quinzena", ...q.first, range: "01–15" },
-    {
-      label: "2ª quinzena", ...q.second,
-      range: q.second.lastDay === null ? "sem registros" : `16–${String(q.second.lastDay).padStart(2, "0")}`,
-    },
+    { label: "2ª quinzena", ...q.second, range: secondRange(q.second.lastDay) },
   ]
   return (
     <div className="mx-4 -mt-2 border-t border-border pt-2">
       <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         Quinzenas · {MONTHS[q.month].slice(0, 3)}/{q.year}
       </p>
-      <div className="grid grid-cols-2 divide-x divide-border">
+      <div className="grid grid-cols-2 divide-x divide-border lg:grid-cols-1 lg:divide-x-0 lg:divide-y">
         {halves.map((h, i) => (
-          <div key={h.label} className={i === 0 ? "pr-2" : "pl-2"} title={`${h.days} ${h.days === 1 ? "dia" : "dias"} com boleta`}>
+          <div
+            key={h.label}
+            className={i === 0 ? "pr-2 lg:pr-0 lg:pb-1.5" : "pl-2 lg:pl-0 lg:pt-1.5"}
+            title={`${h.days} ${h.days === 1 ? "dia" : "dias"} com boleta`}
+          >
             <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{h.label}</p>
             <p className={`whitespace-nowrap text-sm font-semibold tabular-nums ${netColor(h.net, h.days)}`}>{formatCurrency(h.net)}</p>
-            <p className="text-[10px] text-muted-foreground">{h.range}</p>
+            <p className="text-[10px] text-muted-foreground">{h.days ? h.range : "sem registros"}</p>
           </div>
         ))}
       </div>
