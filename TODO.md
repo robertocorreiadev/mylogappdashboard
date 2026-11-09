@@ -321,18 +321,26 @@ espremido no fim desta revisão.
     futuras podem ser usadas para **simulação**. Ideia, se virar uso real:
     marcar a boleta como "simulação" e deixar o usuário incluir ou não nos
     totais (não bloquear data futura no formulário).
-- [ ] Débito técnico (não feito de propósito): a fórmula do líquido está
-      escrita à mão em `stats-overview.tsx:49–51`, `app/gestor/page.tsx`
-      (2 lugares), `overview-panel.tsx` e `daily-records-panel.tsx` —
-      migrar para `recordNet()` numa tarefa própria. Risco: se a regra
-      mudar e um lugar ficar para trás, total e quinzenas divergem.
-- [ ] Débito técnico: `dashboard-tabs.tsx` refaz `filterByPeriod` e
-      `netByQuinzena` a cada render (sem `useMemo`). Sem efeito com o
-      volume atual; fazer se houver lentidão ou junto com o débito acima.
-- [ ] Achado pré-existente: em 375px o cabeçalho (botão "Sair") passa da
-      largura da tela e gera rolagem horizontal (`dashboard-header.tsx`,
-      grupo de botões em `flex` sem quebra). Obs.: no `/gestor` em 375px
-      não houve rolagem no teste de 2026-11-09; conferir em `/dashboard`.
+- [x] Débito (fechado 2026-11-09): fórmulas da boleta só em `lib/metrics.ts`
+      — `recordGross()` (novo, com teste) e `recordNet()` usados em
+      `stats-overview.tsx`, `app/gestor/page.tsx` (2 lugares),
+      `overview-panel.tsx` e `daily-records-panel.tsx`. Nenhum
+      `delivered * Number(...)` sobrou fora de `lib/metrics.ts`. Testado no
+      `/gestor`: painéis R$ 12.442 + R$ 1.937 = entregadores R$ 0 + 350 +
+      13.927 + 102 = card líquido R$ 14.379.
+- [x] Débito (fechado 2026-11-09): `dashboard-tabs.tsx` memoiza o filtro de
+      período dos KPIs (`useMemo`), que criava um `Date` por registro a
+      cada render.
+- [x] Achado pré-existente (fechado 2026-11-09): cabeçalho em 375px. O grupo
+      de botões agora quebra linha (`flex-wrap`) e, abaixo do `sm`,
+      "Gestão", "Trocar painel" e "Sair" mostram só o ícone (com
+      `aria-label`). Testado: `/dashboard` e `/gestor` em 375px sem rolagem
+      horizontal e sem botão fora da tela; texto volta em 1280px.
+- [ ] **Vercel sem deploy desde o `4ce4b63`** (visto em 2026-11-09): os
+      commits `8947c88`, `1d6f6fd` e `5c1796a` não geraram deploy nem
+      status "Vercel" no GitHub (o `4ce4b63` gerou: Production, completed).
+      Conferir no painel da Vercel (Deployments e Settings → Git: conexão
+      com o repositório, Ignored Build Step, limite do plano).
 
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via

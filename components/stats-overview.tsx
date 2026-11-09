@@ -2,7 +2,7 @@ import { Truck, TrendingUp, TrendingDown, Wallet, Package } from "lucide-react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency, MONTHS } from "@/lib/format"
-import { netByQuinzena, type QuinzenaSplit } from "@/lib/metrics"
+import { netByQuinzena, recordGross, recordNet, type QuinzenaSplit } from "@/lib/metrics"
 
 function netColor(value: number, days: number) {
   if (!days) return "text-muted-foreground"
@@ -55,9 +55,9 @@ export function StatsOverview({
   periodLabel?: string
 }) {
   const totalDelivered = dailyRecords.reduce((s, r) => s + r.delivered, 0)
-  const totalGross     = dailyRecords.reduce((s, r) => s + r.delivered * Number(r.valuePerDelivery), 0)
+  const totalGross     = dailyRecords.reduce((s, r) => s + recordGross(r), 0)
   const totalExpDR     = dailyRecords.reduce((s, r) => s + Number(r.expenses), 0)
-  const totalNet       = totalGross - totalExpDR
+  const totalNet       = dailyRecords.reduce((s, r) => s + recordNet(r), 0)
   const workDays       = dailyRecords.length
   const avgNet         = workDays ? totalNet / workDays : 0
 

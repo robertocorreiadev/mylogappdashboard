@@ -3,6 +3,7 @@
 import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
+import { recordGross, recordNet } from "@/lib/metrics"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,8 +26,8 @@ function fmtBR(s: string) {
   const d = new Date(s + "T00:00:00")
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`
 }
-function gross(r: DailyRecord) { return r.delivered * Number(r.valuePerDelivery) }
-function net(r: DailyRecord)   { return gross(r) - Number(r.expenses) }
+const gross = recordGross
+const net   = recordNet
 
 // ── Barra de resumo mensal/anual ─────────────────────────────
 function SummaryBar({ label, records, isAnnual = false }: { label: string; records: DailyRecord[]; isAnnual?: boolean }) {

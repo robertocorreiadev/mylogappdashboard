@@ -5,6 +5,7 @@ import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { statusLabel, formatCurrency } from "@/lib/format"
+import { recordGross, recordNet } from "@/lib/metrics"
 
 const STATUS_COLORS: Record<string, string> = {
   pendente: "var(--chart-5)",
@@ -35,10 +36,9 @@ export function OverviewPanel({
     const d = new Date(r.date + "T00:00:00")
     const key = `${d.getFullYear()}-${d.getMonth()}`
     if (!boletaMap[key]) boletaMap[key] = { bruto: 0, liquido: 0, despesas: 0 }
-    const g = r.delivered * Number(r.valuePerDelivery)
-    boletaMap[key].bruto    += g
+    boletaMap[key].bruto    += recordGross(r)
     boletaMap[key].despesas += Number(r.expenses)
-    boletaMap[key].liquido  += g - Number(r.expenses)
+    boletaMap[key].liquido  += recordNet(r)
   }
   const boletaData = Object.entries(boletaMap).map(([key, v]) => {
     const [year, month] = key.split("-").map(Number)

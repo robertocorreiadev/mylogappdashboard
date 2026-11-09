@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DeliveriesPanel } from "@/components/deliveries-panel"
@@ -48,8 +48,16 @@ export function DashboardTabs({
   const [financeMonth, setFinanceMonth] = useState<number | null>(null)
 
   // Os KPIs superiores acompanham o filtro de período (ano/mês) da aba ativa no momento.
-  const kpiDailyRecords = activeTab === "daily"   ? filterByPeriod(dailyRecords, dailyYear, dailyMonth)     : dailyRecords
-  const kpiTransactions = activeTab === "finance" ? filterByPeriod(transactions, financeYear, financeMonth) : transactions
+  // Memo: o filtro cria um Date por registro; sem memo ele roda de novo a cada
+  // troca de aba ou re-render, mesmo sem mudar dados nem período.
+  const kpiDailyRecords = useMemo(
+    () => activeTab === "daily" ? filterByPeriod(dailyRecords, dailyYear, dailyMonth) : dailyRecords,
+    [activeTab, dailyRecords, dailyYear, dailyMonth],
+  )
+  const kpiTransactions = useMemo(
+    () => activeTab === "finance" ? filterByPeriod(transactions, financeYear, financeMonth) : transactions,
+    [activeTab, transactions, financeYear, financeMonth],
+  )
 
   const periodLabel =
     activeTab === "daily"   ? periodLabelFor("Boleta Diária", dailyYear, dailyMonth)

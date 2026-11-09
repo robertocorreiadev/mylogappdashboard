@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest"
-import { recordNet, netByQuinzena } from "./metrics"
+import { recordGross, recordNet, netByQuinzena } from "./metrics"
 
 // Boleta mínima: líquido = delivered * valuePerDelivery - expenses.
 function rec(date: string, delivered: number, valuePerDelivery: string, expenses = "0") {
   return { date, delivered, valuePerDelivery, expenses }
 }
+
+describe("recordGross", () => {
+  it("calcula entregas × valor, sem descontar despesas", () => {
+    expect(recordGross(rec("2026-11-03", 10, "5.50", "15"))).toBe(55)
+  })
+})
 
 describe("recordNet", () => {
   it("calcula bruto menos despesas", () => {

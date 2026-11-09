@@ -8,6 +8,7 @@ import { StatsOverview } from "@/components/stats-overview"
 import { InvitesPanel } from "@/components/invites-panel"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency, panelLabel, PANEL_LABELS } from "@/lib/format"
+import { recordGross, recordNet } from "@/lib/metrics"
 
 export default async function GestorPage() {
   let ctx
@@ -28,9 +29,8 @@ export default async function GestorPage() {
   const byUser = new Map<number, { delivered: number; net: number }>()
   for (const r of dailyRecords) {
     const cur = byUser.get(r.userId) ?? { delivered: 0, net: 0 }
-    const gross = r.delivered * Number(r.valuePerDelivery)
     cur.delivered += r.delivered
-    cur.net += gross - Number(r.expenses)
+    cur.net += recordNet(r)
     byUser.set(r.userId, cur)
   }
 
@@ -41,7 +41,7 @@ export default async function GestorPage() {
   for (const r of dailyRecords) {
     const cur = byPanel.get(r.panel) ?? { delivered: 0, gross: 0, expenses: 0 }
     cur.delivered += r.delivered
-    cur.gross += r.delivered * Number(r.valuePerDelivery)
+    cur.gross += recordGross(r)
     cur.expenses += Number(r.expenses)
     byPanel.set(r.panel, cur)
   }

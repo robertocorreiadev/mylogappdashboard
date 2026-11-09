@@ -25,9 +25,14 @@ Revisão de código + segurança feita em 2026-11-09: 4 defeitos corrigidos
 estado vazio) — detalhe no `TODO.md`. Regra de QA do projeto agora no
 `CLAUDE.md`.
 
-**⏭️ Próxima sessão — começar por aqui:** conferir o deploy na Vercel.
-Depois, os débitos da seção "Líquido por quinzena" do `TODO.md`
-(`recordNet()` nos 5 lugares, `useMemo`, botão "Sair" em 375px).
+Débitos da faixa fechados em 2026-11-09 (`recordGross`/`recordNet` como
+fonte única das fórmulas, `useMemo` no filtro dos KPIs, cabeçalho em 375px).
+
+**⏭️ Próxima sessão — começar por aqui:** a Vercel **não fez deploy** dos
+commits depois do `4ce4b63` (sem deploy nem status no GitHub). Conferir no
+painel da Vercel: conexão Git, Ignored Build Step e limite do plano.
+Pendente do usuário: apagar as branches antigas (comando no fim da sessão
+de 2026-11-09; o classificador do Claude recusa exclusão de branch).
 
 O commit local
 `bcda5e7` fazia a mesma consolidação de auth em paralelo e nunca foi

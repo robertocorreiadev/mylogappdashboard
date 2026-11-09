@@ -151,8 +151,10 @@ export function DashboardHeader({
           </div>
         </a>
 
-        {/* Direita: usuário + engrenagem + sair */}
-        <div className="flex items-center gap-2">
+        {/* Direita: usuário + engrenagem + sair. No celular os botões mostram
+            só o ícone (o texto volta no sm) e a linha pode quebrar, para não
+            gerar rolagem horizontal em 375px. */}
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Logado como</p>
             <p className="text-sm font-semibold text-foreground">{userName}</p>
@@ -173,9 +175,9 @@ export function DashboardHeader({
           {/* Botão Gestão (usuários + organizações, somente admin) */}
           {isAdmin && !viewerMode && (
             <a href="/gestao">
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" aria-label="Gestão">
                 <User className="h-4 w-4" aria-hidden="true" />
-                Gestão
+                <span className="hidden sm:inline">Gestão</span>
               </Button>
             </a>
           )}
@@ -183,17 +185,18 @@ export function DashboardHeader({
           {/* Botão Trocar painel */}
           {!viewerMode && (
             <a href="/select">
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                ⇄ Trocar painel
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" aria-label="Trocar painel">
+                <span aria-hidden="true">⇄</span>
+                <span className="hidden sm:inline">Trocar painel</span>
               </Button>
             </a>
           )}
 
           {/* Botão Sair */}
           <form action={logout}>
-            <Button type="submit" variant="secondary" size="sm" className="gap-2">
+            <Button type="submit" variant="secondary" size="sm" className="gap-2" aria-label="Sair">
               <LogOut className="h-4 w-4" aria-hidden="true" />
-              Sair
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </form>
         </div>

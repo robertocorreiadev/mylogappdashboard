@@ -1,10 +1,19 @@
 import type { DailyRecord } from "@/lib/db/schema"
 
-type NetInput = Pick<DailyRecord, "date" | "delivered" | "valuePerDelivery" | "expenses">
+type MoneyInput = Pick<DailyRecord, "delivered" | "valuePerDelivery" | "expenses">
+type NetInput = MoneyInput & Pick<DailyRecord, "date">
 
-/** Líquido de uma boleta: bruto (entregas × valor) menos despesas. */
-export function recordNet(r: NetInput): number {
-  return r.delivered * Number(r.valuePerDelivery) - Number(r.expenses)
+// Fonte única das fórmulas da boleta: telas e resumos usam estas funções,
+// para total, quinzenas e gráficos nunca divergirem.
+
+/** Bruto de uma boleta: entregas × valor por entrega. */
+export function recordGross(r: Pick<DailyRecord, "delivered" | "valuePerDelivery">): number {
+  return r.delivered * Number(r.valuePerDelivery)
+}
+
+/** Líquido de uma boleta: bruto menos despesas. */
+export function recordNet(r: MoneyInput): number {
+  return recordGross(r) - Number(r.expenses)
 }
 
 export type QuinzenaSplit = {
