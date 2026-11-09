@@ -336,11 +336,11 @@ espremido no fim desta revisão.
       "Gestão", "Trocar painel" e "Sair" mostram só o ícone (com
       `aria-label`). Testado: `/dashboard` e `/gestor` em 375px sem rolagem
       horizontal e sem botão fora da tela; texto volta em 1280px.
-- [ ] **Vercel sem deploy desde o `4ce4b63`** (visto em 2026-11-09): os
-      commits `8947c88`, `1d6f6fd` e `5c1796a` não geraram deploy nem
-      status "Vercel" no GitHub (o `4ce4b63` gerou: Production, completed).
-      Conferir no painel da Vercel (Deployments e Settings → Git: conexão
-      com o repositório, Ignored Build Step, limite do plano).
+- [x] Vercel (conferido no painel em 2026-11-09): não estava parada, só
+      atrasada. Produção = `9955754` (Ready), que já contém as correções
+      (`5c1796a`) e os débitos (`6011e51`); commits intermediários não ganham
+      deploy próprio quando um mais novo chega. A API de deployments do
+      GitHub demorou a refletir — conferir no painel da Vercel, não só nela.
 
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via

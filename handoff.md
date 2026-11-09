@@ -28,9 +28,8 @@ estado vazio) — detalhe no `TODO.md`. Regra de QA do projeto agora no
 Débitos da faixa fechados em 2026-11-09 (`recordGross`/`recordNet` como
 fonte única das fórmulas, `useMemo` no filtro dos KPIs, cabeçalho em 375px).
 
-**⏭️ Próxima sessão — começar por aqui:** a Vercel **não fez deploy** dos
-commits depois do `4ce4b63` (sem deploy nem status no GitHub). Conferir no
-painel da Vercel: conexão Git, Ignored Build Step e limite do plano.
+Vercel conferida no painel em 2026-11-09: produção = `9955754` (Ready), com
+todas as correções e débitos. Nada pendente da faixa de quinzenas.
 Branches antigas apagadas em 2026-11-09 (local e GitHub): só resta `main`.
 
 O commit local
