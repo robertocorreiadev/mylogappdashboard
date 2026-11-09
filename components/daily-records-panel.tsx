@@ -1,10 +1,11 @@
 "use client"
 
 import { Fragment, useState, useTransition, useMemo } from "react"
-import { Pencil, Trash2, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
+import { Pencil, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
 import { FormError } from "@/components/form-error"
 import type { ActionResult } from "@/lib/forms"
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
 import { localDateISO } from "@/lib/dates"
 import { recordGross, recordNet } from "@/lib/metrics"
 import { saveDailyRecord, deleteDailyRecord } from "@/app/actions/daily-records"
@@ -217,7 +218,6 @@ function RecordRow({
   record, panel = "jadlog", readOnly = false, onSave = saveDailyRecord, onDelete = deleteDailyRecord,
 }: { record: DailyRecord; panel?: string; readOnly?: boolean; onSave?: SaveAction; onDelete?: DeleteAction }) {
   const [editOpen, setEditOpen]    = useState(false)
-  const [pending, startTransition] = useTransition()
   const g = gross(record)
   const n = net(record)
   const d = new Date(record.date + "T00:00:00")
@@ -249,12 +249,10 @@ function RecordRow({
                 onClick={() => setEditOpen(true)} aria-label="Editar">
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                disabled={pending}
-                onClick={() => startTransition(() => onDelete(record.id))}
-                aria-label="Excluir">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <ConfirmDeleteButton
+                itemLabel={`a boleta de ${fmtBR(record.date)}`}
+                onConfirm={() => onDelete(record.id)}
+              />
             </div>
           )}
         </TableCell>

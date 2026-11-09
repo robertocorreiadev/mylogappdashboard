@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Plus, Trash2, Package, Download } from "lucide-react"
+import { Plus, Package, Download } from "lucide-react"
 import type { Delivery } from "@/lib/db/schema"
 import { FormError } from "@/components/form-error"
 import type { ActionResult } from "@/lib/forms"
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
 import { localDateISO } from "@/lib/dates"
 import { createDelivery, deleteDelivery, updateDeliveryStatus } from "@/app/actions/deliveries"
 import { Button } from "@/components/ui/button"
@@ -237,16 +238,13 @@ function DeliveryRow({
       </TableCell>
       {!readOnly && (
         <TableCell className="text-right">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          <ConfirmDeleteButton
+            itemLabel={`a entrega ${delivery.trackingCode}`}
+            onConfirm={() => onDelete(delivery.id)}
             disabled={isPending}
-            onClick={() => startTransition(() => onDelete(delivery.id))}
-            aria-label="Excluir entrega"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            iconClassName="h-4 w-4"
+          />
         </TableCell>
       )}
     </TableRow>

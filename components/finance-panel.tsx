@@ -1,10 +1,11 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
+import { Plus, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
 import { FormError } from "@/components/form-error"
 import type { ActionResult } from "@/lib/forms"
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
 import { localDateISO } from "@/lib/dates"
 import { createTransaction, deleteTransaction, updateTransaction } from "@/app/actions/transactions"
 import { Button } from "@/components/ui/button"
@@ -108,7 +109,6 @@ function TransactionRow({
   onDelete?: DeleteAction
 }) {
   const [editOpen, setEditOpen]      = useState(false)
-  const [isPending, startTransition] = useTransition()
   const isReceita = transaction.type === "receita"
 
   return (
@@ -133,11 +133,12 @@ function TransactionRow({
                 onClick={() => setEditOpen(true)} aria-label="Editar">
                 <Pencil className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                disabled={isPending} onClick={() => startTransition(() => onDelete(transaction.id))}
-                aria-label="Excluir">
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <ConfirmDeleteButton
+                itemLabel={`o lançamento "${transaction.description}"`}
+                onConfirm={() => onDelete(transaction.id)}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                iconClassName="h-4 w-4"
+              />
             </div>
           )}
         </TableCell>

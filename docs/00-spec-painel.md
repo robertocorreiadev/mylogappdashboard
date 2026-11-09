@@ -550,7 +550,7 @@ Regras comuns a todas:
   - `expiresInDays` ∈ `{"1": 1, "7": 7, "30": 30, "0": 36500}` (valor desconhecido → 7);
   - gera o token, grava só o hash e faz `revalidatePath("/gestor")`;
   - devolve `{ success: true, url: "{BASE}/convite/{token}" }`. O token puro aparece **só** nesta resposta.
-- `listPendingInvites(ctx?)` → convites sem `accepted_at` e sem `revoked_at`, do mais novo para o mais velho. **[DEFEITO D7]**
+- `listPendingInvites(ctx?)` → convites sem `accepted_at`, sem `revoked_at` e com `expires_at` no futuro (vencido não é pendente: já não pode ser aceito), do mais novo para o mais velho.
 - `revokeInvite(id)` → `revoked_at = now`. Só convites da própria organização e ainda não aceitos.
 - `revokeAllPendingInvites()` → revoga todos os pendentes da organização.
 - `listAcceptedInvites(ctx?)` → `{ id, email, acceptedAt, acceptedByName }`, do aceite mais novo para o mais velho.
@@ -782,7 +782,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - `R$/unid.` como `R$ 3,50`;
   - despesas como `"− R$ x"`;
   - líquido verde ou vermelho;
-  - ações (fora de `readOnly`): editar abre o modal `"Editar boleta — {DD/MM/AAAA}"` / `"Altere os dados do dia e salve."` com o mesmo formulário; excluir apaga direto, **sem confirmação**.
+  - ações (fora de `readOnly`): editar abre o modal `"Editar boleta — {DD/MM/AAAA}"` / `"Altere os dados do dia e salve."` com o mesmo formulário; excluir pede confirmação (`ConfirmDeleteButton`, item `"a boleta de {DD/MM/AAAA}"`).
 - **Resumo mensal**:
   - fica no **fim** de cada bloco de mês. Como a ordem é decrescente, fica abaixo do dia **mais antigo** **[DECIDIR Q2]**;
   - texto `"↳ Resumo {Mês} {Ano}"`;
@@ -846,7 +846,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - entregue: chart-2;
   - cancelada: vermelho.
   - Em `readOnly`, só o badge aparece.
-- Excluir apaga sem confirmação.
+- Excluir pede confirmação (`ConfirmDeleteButton`, item `"a entrega {código}"`).
 - Vazio: `"Nenhuma entrega cadastrada"` + `Clique em "Nova entrega" para começar.` (este texto e os outros textos com aspas internas aparecem sem as aspas externas).
 - CSV `entregas-{panel}-{data}.csv`: `Código de Rastreio;Destinatário;Cidade;Endereço;Prazo;Valor;Status`. Exporta tudo, sem filtro.
 
@@ -862,7 +862,9 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - `"Data"` (padrão hoje).
 
   Botão `"Salvar lançamento"` ou `"Salvar alterações"`.
-- Tabela: `"Data"`, `"Descrição"`, `"Categoria"`, `"Tipo"`, `"Valor"` (`+R$` verde ou `−R$` vermelho), `"Ações"`.
+- Tabela: `"Data"`, `"Descrição"`, `"Categoria"`, `"Tipo"`, `"Valor"` (`+R$` verde ou `−R$` vermelho), `"Ações"`. Excluir pede confirmação (`ConfirmDeleteButton`, item `"o lançamento \"{descrição}\""`).
+
+**`ConfirmDeleteButton`** (`components/confirm-delete-button.tsx`): lixeira que abre o modal `"Excluir {item}?"` / `"Essa ação não pode ser desfeita."`, botões `"Cancelar"` (foco inicial) e `"Excluir"` (`"Excluindo..."`). Não usa `window.confirm`.
 - Vazio: `"Nenhum lançamento registrado"` (sem nenhum lançamento) ou `"Nenhum lançamento no período selecionado"` (com filtro). Fora de `readOnly` vem também `Clique em "Novo lançamento" para começar.`.
 - CSV `financeiro-{panel}-{data}.csv`: `Data;Descrição;Categoria;Tipo;Valor`. Exporta o período filtrado.
 
@@ -1032,7 +1034,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 | `--chart-4` | `#8d7bdb` | `#5b3fa8` |
 | `--chart-5` | `#8891a4` | `#5b6270` |
 
-**[DEFEITO D11]**: os modais ficam fora deste tema.
+Modais e menus (Dialog, Select) renderizam num portal no `<body>`, fora do `<main data-panel>`. Por isso o `/panel2` também marca o `<body>` com `data-panel="panel2"` (`components/panel-theme.tsx`, `PanelTheme`; a marca sai ao deixar a página).
 
 Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foreground }`.
 
@@ -1092,16 +1094,13 @@ Para chamar uma entrega de "pronta", todos estes passos DEVEM passar:
 
 Reconstruir **sem** estes defeitos. Para corrigir no sistema atual, abrir uma tarefa própria para cada um.
 
-Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D2** (data "hoje" em UTC), **D3** (validação no servidor), **D9** (auditoria do `adminSaveDailyRecord`), **D12** (actions lançavam exceção), **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
+Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D7** (convites vencidos listados como pendentes), **D11** (modais do Painel 2 sem o tema), **D13** (excluir sem confirmação), **D2** (data "hoje" em UTC), **D3** (validação no servidor), **D9** (auditoria do `adminSaveDailyRecord`), **D12** (actions lançavam exceção), **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
 
 | ID | Onde | Defeito | Correção |
 |---|---|---|---|
 | D6 | `app/gestor/page.tsx` | Os cartões do topo somam os dois painéis, contra a regra de nunca somar painéis. | Mostrar só a composição por painel, ou cartões por painel. |
-| D7 | `listPendingInvites` | Lista convites **vencidos** como pendentes. | Filtrar com `expires_at > now()`, ou marcá-los como vencidos. |
 | D8 | `UsersPanel`, modal de exclusão | O texto diz que apaga tudo, mas a exclusão é bloqueada (FK) para quase todos os usuários reais. | Ajustar o texto ou o fluxo. |
 | D10 | `/gestor/auditoria` | O admin só vê e exclui entradas da organização em que **ele** é gestor. Sem papel gestor, vai para `/select`. | Decidir se o admin deve ter uma auditoria global. |
-| D11 | Tema do Painel 2 | Os modais renderizam num portal em `<body>`, fora do `[data-panel]`. Por isso ficam com a cor de marca (índigo) no Painel 2. Deduzido do código; não conferido na tela. | Aplicar `data-panel` no `<html>` ou no `<body>`. |
-| D13 | `RecordRow`, `DeliveryRow`, `TransactionRow` | Excluir não pede confirmação. | Pedir confirmação. |
 | D15 | `app/globals.css`, tema claro | Com `data-theme="light"`, os tokens resolvem certo (`getComputedStyle`: `--background = #f4f5f8`), mas o fundo calculado de `<html>`/`<body>` não muda. Suspeita: alguma regra de `shadcn/tailwind.css` ganha a cascata. Registrado no `TODO.md`. Não afeta hoje, porque não há botão para trocar de tema. | Investigar antes de criar o botão de tema. |
 
 Limites aceitos (não são defeitos): o limite de tentativas fica em memória (§6.3); a sessão dura 365 dias e não pode ser revogada (§6.2); o cookie de state do OAuth só vence depois de 10 min.

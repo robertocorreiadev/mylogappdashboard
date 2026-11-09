@@ -54,9 +54,9 @@ rotas, actions, telas com textos exatos, tema e testes. Os prompts antigos
 (`DASHBOARD PROMPT.txt` v1 e `v2.txt`) e o schema inicial (`SQL FUNC.txt`)
 estão em `docs/historico/`. Commitados em 2026-11-09.
 - Toda mudança de comportamento DEVE atualizar a spec no mesmo commit.
-- Defeitos abertos na §15: D6, D7, D8, D10, D11, D13 e D15 (D1–D5, D9,
-  D12, D14 e D16 corrigidos em 2026-11-09). D6, D8 e D10 pedem decisão do
-  dono; D7, D11 e D13 são correções diretas.
+- Defeitos abertos na §15: D6, D8, D10 e D15 (os outros corrigidos em
+  2026-11-09). D6, D8 e D10 pedem decisão do dono; D15 só importa quando
+  houver botão de tema.
 - Decisões do dono: Q1–Q3 na §16.
 
 ## 🎯 Próxima tarefa principal

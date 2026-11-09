@@ -4,6 +4,7 @@ import { isAdminEmail } from "@/lib/auth"
 import { getDeliveries } from "@/app/actions/deliveries"
 import { getTransactions } from "@/app/actions/transactions"
 import { getDailyRecords } from "@/app/actions/daily-records"
+import { PanelTheme } from "@/components/panel-theme"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardTabs } from "@/components/dashboard-tabs"
 
@@ -34,6 +35,7 @@ export default async function Panel2Page() {
       className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8"
       data-panel={PANEL}
     >
+      <PanelTheme panel={PANEL} />
       <DashboardHeader
         userName={user.name}
         userEmail={user.email}

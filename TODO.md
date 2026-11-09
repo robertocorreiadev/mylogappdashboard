@@ -383,6 +383,20 @@ espremido no fim desta revisão.
   linhas de teste gravadas. Não testado: um salvamento válido (gravaria em
   produção) — conferir em uso normal depois do deploy.
 
+## D7, D11 e D13 da spec (2026-11-09)
+- [x] D7: `listPendingInvites` não lista convite vencido (`expires_at > now`).
+      Sem convites pendentes no banco hoje: efeito não visível com os dados.
+- [x] D11: `/panel2` marca o `<body>` com `data-panel` (`PanelTheme`), então
+      modais e selects (portal no body) usam o azul do Painel 2. Confirmado
+      antes (modal `#8d7bdb`) e depois (`#4f9dff`); `/dashboard` sem a marca.
+- [x] D13: excluir boleta, entrega e lançamento pede confirmação
+      (`ConfirmDeleteButton`, foco em "Cancelar"). Testado na boleta e no
+      financeiro clicando só em Cancelar (nada excluído); rastreio sem
+      entregas cadastradas — mesmo componente, não visto na tela.
+- [ ] Débito: a exclusão de usuário (`users-panel.tsx`) tem o próprio modal de
+      confirmação; unificar com `ConfirmDeleteButton` (aceitar descrição e
+      `{ error }` da action) quando mexer nessa tela.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

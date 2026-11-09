@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
-import { and, desc, eq, isNull, isNotNull } from "drizzle-orm"
+import { and, desc, eq, gte, isNull, isNotNull } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { invites, users } from "@/lib/db/schema"
 import { requireGestor, requireUser, type MembershipContext } from "@/app/actions/auth"
@@ -34,14 +34,21 @@ export async function createInvite(formData: FormData) {
   return { success: true, url: `${baseUrl}/convite/${token}` }
 }
 
+// Convite pendente = não aceito, não revogado e ainda aceitável. A borda do
+// prazo é a mesma de lib/invites.ts (lá, vencido é expiresAt < agora). D7.
+function pendingInvitesOf(organizationId: number) {
+  return and(
+    eq(invites.organizationId, organizationId),
+    isNull(invites.acceptedAt),
+    isNull(invites.revokedAt),
+    gte(invites.expiresAt, new Date()),
+  )
+}
+
 export async function listPendingInvites(known?: MembershipContext) {
   const { organizationId } = known ?? await requireGestor()
   return db.select().from(invites)
-    .where(and(
-      eq(invites.organizationId, organizationId),
-      isNull(invites.acceptedAt),
-      isNull(invites.revokedAt),
-    ))
+    .where(pendingInvitesOf(organizationId))
     .orderBy(desc(invites.createdAt))
 }
 
@@ -57,7 +64,7 @@ export async function revokeInvite(id: number) {
 export async function revokeAllPendingInvites() {
   const { organizationId } = await requireGestor()
   await db.update(invites).set({ revokedAt: new Date() })
-    .where(and(eq(invites.organizationId, organizationId), isNull(invites.acceptedAt), isNull(invites.revokedAt)))
+    .where(pendingInvitesOf(organizationId))
   revalidatePath("/gestor")
 }
 
