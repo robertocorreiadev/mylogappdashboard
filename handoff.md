@@ -87,18 +87,16 @@ com o OK do usuário em 2026-11-13.
 boleta, pacote e convites, de ponta a ponta, deixando o banco como estava
 (detalhe no `TODO.md`, seção "Testes em produção"). Achado e corrigido: o
 "Copiar" do convite falhava calado sem permissão da área de transferência.
-`.env` local com `sslmode=verify-full` (testado).
+`sslmode`: a `DATABASE_URL` da Vercel vem da integração Neon e não
+pode ser editada; o código pede `verify-full` (`lib/db/ssl-mode.ts`).
 
 **⏭️ Próxima sessão — o que ficou para o usuário (credencial, sessão dele
 ou decisão dele):**
-1. Na Vercel, trocar `sslmode=require` por `sslmode=verify-full` em
-   `DATABASE_URL` e `DATABASE_URL_UNPOOLED` e fazer redeploy (o valor tem a
-   senha do banco: o Claude não digita credenciais).
-2. Testar o login com Google e o "Trocar conta" (os dois desconectam a
+1. Testar o login com Google e o "Trocar conta" (os dois desconectam a
    sessão; o Claude não pode entrar de novo com a senha).
-3. Criar um banco de teste (branch do Neon) e rodar
+2. Criar um banco de teste (branch do Neon) e rodar
    `scripts/seed-worst-case.ts` (a connection string tem senha).
-4. Task-observer: instalar a correção em staging do hook
+3. Task-observer: instalar a correção em staging do hook
    `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`, observation
    0026).
 

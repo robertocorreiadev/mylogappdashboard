@@ -415,12 +415,12 @@ espremido no fim desta revisão.
       organização). Testado no navegador em 2026-11-09 (63/63 entradas).
 - [x] D15: não se reproduz em dev nem no build (2026-11-09). Guarda em
       `lib/theme-tokens.test.ts`. Revalidar ao criar o botão de tema.
-- [x] `sslmode=verify-full` no `.env` local (2026-11-13): testado com
-      `select 1` nos dois modos — `verify-full` conecta e o aviso some.
-- [ ] Na Vercel (Settings → Environment Variables → `DATABASE_URL` e
-      `DATABASE_URL_UNPOOLED`): trocar `sslmode=require` por
-      `sslmode=verify-full` e fazer redeploy. Fica para o usuário: o valor
-      contém a senha do banco.
+- [x] `sslmode` resolvido no código (2026-11-13): na Vercel, `DATABASE_URL`
+      vem da integração Neon (`sslmode=require`, sem opção de editar), então
+      `lib/db/index.ts` passa a URL por `withVerifyFullSsl`
+      (`lib/db/ssl-mode.ts` + 3 testes). Conferido num processo novo com o
+      `.env` em `require` (igual à produção): conecta e o aviso não aparece.
+      O `.env` local voltou a `require`, igual à Vercel.
 
 ## Redesign de layout — Fase 1: fundação visual (2026-11-13)
 Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheerful-torvalds.md`.

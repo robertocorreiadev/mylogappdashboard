@@ -136,8 +136,8 @@ Contratos do Base UI que o código usa (DEVE manter):
 
 | Nome | Uso |
 |---|---|
-| `DATABASE_URL` | String de conexão Postgres (Neon, com pool). `lib/db/index.ts` usa esta. Use `sslmode=verify-full`: com `require`, o `pg` 8.22 mostra um aviso de segurança (no `pg` 9, `require` passa a ser mais fraco). |
-| `DATABASE_URL_UNPOOLED` | Conexão direta. Existe no `.env`, mas o código não a lê. Mesmo `sslmode=verify-full`. |
+| `DATABASE_URL` | String de conexão Postgres (Neon, com pool). `lib/db/index.ts` usa esta, passando por `withVerifyFullSsl` (`lib/db/ssl-mode.ts`): `sslmode=require`/`prefer`/`verify-ca` vira `verify-full` (o `pg` 8.22 já trata assim e avisa que no `pg` 9 eles ficam mais fracos). Motivo: na Vercel a variável vem da **integração Neon**, que gera `sslmode=require` e não deixa editar (menu sem "Edit"). `disable` e URLs sem `sslmode` ficam como estão. |
+| `DATABASE_URL_UNPOOLED` | Conexão direta. Existe no `.env` e na Vercel (integração Neon), mas o código não a lê. |
 | `SESSION_SECRET` | Chave HMAC do cookie de sessão. Sem ela, `getSecret()` lança `"SESSION_SECRET não configurado"`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth do Google. |
 | `NEXT_PUBLIC_BASE_URL` | URL pública, sem `/` no fim. Monta o redirect do OAuth e o link de convite. |
@@ -1047,7 +1047,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **162/162**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **165/165**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
@@ -1066,6 +1066,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 | `lib/theme.test.ts` | `parseTheme` (`light`/`dark`; vazio, maiúsculas e lixo → escuro); `themeColor` dos dois temas; nome do cookie `theme` |
 | `lib/user-deletion.test.ts` | `planUserDeletion`: sem organização própria → pode; organização só dele → vai junto; dono de organização com outros membros → recusa com o nome; recusa se qualquer organização própria for compartilhada |
 | `lib/theme-tokens.test.ts` | todo token do tema escuro existe no claro e vice-versa (exceto `radius`); o Painel 2 tem a mesma lista de tokens nos dois temas |
+| `lib/db/ssl-mode.test.ts` | `withVerifyFullSsl`: troca `require`/`prefer`/`verify-ca` por `verify-full` mantendo o resto da URL (`channel_binding`, senha codificada); não mexe em `verify-full`, `disable`, URL sem `sslmode` nem vazio |
 | `lib/db/scopes.test.ts` | **teste de arquitetura**: nenhum arquivo `app/actions/*.ts` contém `.from(T)`, `db.update(T)`, `db.delete(T)` ou `db.insert(T)` para `T` ∈ {`dailyRecords`, `deliveries`, `transactions`} |
 
 As server actions e os componentes não têm teste automatizado. Eles dependem de banco e de `next/headers`.
