@@ -1047,14 +1047,14 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **160/160**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **162/162**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
-| `lib/worst-case.test.ts` | **base de pior caso** (`lib/fixtures/worst-case.ts`: 3 entregadores × 2 painéis na mesma data, R$ 354 mil por painel no mês, mês negativo, só 1ª quinzena, só o dia 16, virada de ano): `computeKpis` (dias = datas distintas, média, R$ grandes, saldo com centavos), `panelSummaries` e `memberStats` (nunca somam painéis), `netByQuinzena` (soma = mês, bordas, virada de ano), `lastBoletaByUser`, `formatCurrencyCompact`; `seedTargetAllowed` (recusa vazio, URL inválida e o mesmo host+banco do `DATABASE_URL`) |
+| `lib/worst-case.test.ts` | **base de pior caso** (`lib/fixtures/worst-case.ts`: 3 entregadores × 2 painéis na mesma data, R$ 354 mil por painel no mês, mês negativo, só 1ª quinzena, só a 2ª quinzena com vários dias, só o dia 16, virada de ano pelo `filterByPeriod`): `computeKpis` (dias = datas distintas, média, R$ grandes, saldo com centavos), `panelSummaries` e `memberStats` (nunca somam painéis), `netByQuinzena` (soma = mês, bordas, virada de ano), `lastBoletaByUser`, `formatCurrencyCompact`; `seedTargetAllowed` (recusa: destino vazio, URL inválida, `DATABASE_URL` ausente, mesmo endpoint Neon com ou sem `-pooler` e com qualquer banco; permite outro endpoint) |
 | `lib/auth-redirect.test.ts` | `safeLogoutRedirect`: vazio → `/`; aceita `/convite/{token}`; recusa URL externa, `//host`, `..`, query, outra rota e `/convite/` vazio |
-| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime` (fuso de São Paulo, inclusive perto da meia-noite UTC); `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado); `lastBoletaByUser`; `auditFieldLabel` e `auditEntityPlural` |
+| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime` (fuso de São Paulo, inclusive perto da meia-noite UTC); `memberStats` (por painel, sem somar; não calcula a última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado); `lastBoletaByUser`; `auditFieldLabel` e `auditEntityPlural` |
 | `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos); `panelColor` (cor do painel, desconhecido → `--primary`) e `normalizeSearch` |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
@@ -1091,7 +1091,12 @@ As server actions e os componentes não têm teste automatizado. Eles dependem d
 ### 14.1a Base de teste de pior caso
 
 - `lib/fixtures/worst-case.ts`: organização 900, entregadores 901–903 (`*.piorcaso@exemplo.test`), boletas e lançamentos fictícios dos piores casos (ver o cabeçalho do arquivo). Usada por `lib/worst-case.test.ts`.
-- `scripts/seed-worst-case.ts`: grava a mesma base num **banco de teste** (`SEED_DATABASE_URL`, com o schema da §4.2). Só roda com `--yes` e se `seedTargetAllowed` aprovar: host e nome do banco diferentes do `DATABASE_URL` (produção). Apaga e recria só a organização 900. As contas têm senha inutilizável (`"!"`): entrar só pelo modo ADMIN MASTER. Os ids são fixos (900–903): use num banco só de teste.
+- `scripts/seed-worst-case.ts`: grava a mesma base num **banco de teste** (`SEED_DATABASE_URL`, com o schema da §4.2). Travas:
+  - só roda com `--yes` e se `seedTargetAllowed` aprovar: recusa sem `DATABASE_URL` para comparar (rode com `--env-file=.env`) e recusa o **mesmo endpoint** do `DATABASE_URL`, com ou sem o sufixo `-pooler` do Neon e com qualquer nome de banco. Um branch do Neon tem outro endpoint: permitido;
+  - dentro da transação, aborta se os ids 901–903 pertencerem a usuários com outro e-mail (branch com cópia de usuários reais) ou se a organização 900 tiver outro slug;
+  - apaga e recria só a organização 900 (pacotes antes, porque `deliveries` não tem cascade; o resto pelo cascade) e os 3 usuários;
+  - avança as sequências de `users` e `organizations` (`setval`), para os próximos cadastros não colidirem com os ids fixos.
+- As contas têm senha inutilizável (`"!"`): entrar só pelo modo ADMIN MASTER. Nunca foi executado (ainda não há banco de teste).
 
 ### 14.2 Critérios de aceite
 

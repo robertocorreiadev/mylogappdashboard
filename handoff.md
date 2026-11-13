@@ -97,12 +97,8 @@ produção, credencial ou decisão dele):**
    `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`), que ainda
    dispara a triagem de investimento por engano (observation 0026).
 
-**⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
-produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail
-autoritativo; não deu para testar o fluxo real aqui, exige credenciais).
-Entrar com uma conta já ligada e conferir que segue funcionando. Conferir
-também um salvamento normal de boleta, entrega e lançamento (validação nova
-no servidor, D3). Depois: defeitos restantes da §15.
+(O antigo "começar por aqui" de 2026-11-09 — login com Google em produção e
+conferir salvamentos — entrou na lista "o que ficou para o usuário" acima.)
 Branches antigas apagadas em 2026-11-09 (local e GitHub): só resta `main`.
 
 O commit local

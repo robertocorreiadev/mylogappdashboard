@@ -60,9 +60,8 @@ describe("memberStats (cartão do entregador no /gestor)", () => {
     expect(m.byPanel.panel2).toEqual({ delivered: 10, net: 30 })
     expect(m).not.toHaveProperty("net")
   })
-  it("última atividade = data da boleta mais recente", () => {
-    expect(memberStats(recs).get(1)!.lastDate).toBe("2026-11-12")
-    expect(memberStats(recs).get(2)!.lastDate).toBe("2026-10-01")
+  it("não calcula a última boleta (isso é lastBoletaByUser)", () => {
+    expect(memberStats(recs).get(1)).not.toHaveProperty("lastDate")
   })
   it("quem não tem boleta não aparece no mapa", () => {
     expect(memberStats(recs).get(3)).toBeUndefined()

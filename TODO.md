@@ -587,6 +587,15 @@ Débito (eficiência/repetição, para uma tarefa própria):
 - [x] `scripts/seed-worst-case.ts`: grava a base num banco de TESTE; trava
       `seedTargetAllowed` recusa o host+banco do `DATABASE_URL` (+ testes);
       exige `--yes`. **Nunca rodou** (não existe banco de teste ainda).
+- [x] Revisão de código (2026-11-13) do seed, ainda não executado: a trava
+      não via o host `-pooler` do Neon como o mesmo banco (o `.env` usa
+      `-pooler`: o host direto passaria) e liberava sem `DATABASE_URL`;
+      o seed apagava os ids 901–903 sem conferir de quem eram, não apagava
+      pacotes e não avançava as sequências. Tudo corrigido + testes
+      (`-pooler`, sem `DATABASE_URL`). Também: mês só com a 2ª quinzena
+      (vários dias) no fixture, virada de ano pelo `filterByPeriod`,
+      `memberStats` sem `lastDate` duplicado, um só "começar por aqui" no
+      handoff.
 - [ ] Criar um banco Neon de teste (branch do Neon serve), aplicar o DDL da
       spec §4.2 e rodar o seed; depois fazer o smoke test logado nele.
 

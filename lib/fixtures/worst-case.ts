@@ -8,6 +8,7 @@
 // - abr/2026: mês negativo (despesa maior que o bruto);
 // - mar/2026: só a 1ª quinzena;
 // - fev/2026: só o dia 16;
+// - jul/2026: só a 2ª quinzena, vários dias (20, 25 e 31);
 // - 31/12/2025 e 01/01/2026: virada de ano.
 import type { DailyRecord, Transaction } from "@/lib/db/schema"
 
@@ -41,7 +42,7 @@ function rec(id: number, r: RecInput): DailyRecord {
 
 export function worstCaseDailyRecords(): DailyRecord[] {
   const out: RecInput[] = []
-  const [ana, bruno] = WORST_CASE_MEMBERS
+  const [ana, bruno, carla] = WORST_CASE_MEMBERS
   for (let day = 1; day <= 20; day++) {
     const date = `2026-05-${String(day).padStart(2, "0")}`
     for (const m of WORST_CASE_MEMBERS) {
@@ -55,6 +56,9 @@ export function worstCaseDailyRecords(): DailyRecord[] {
   out.push({ userId: ana.userId, panel: "jadlog", date: "2026-03-05", delivered: 50, vpd: "2.00", expenses: "0.00" })
   out.push({ userId: ana.userId, panel: "jadlog", date: "2026-03-10", delivered: 50, vpd: "2.00", expenses: "0.00" })
   out.push({ userId: ana.userId, panel: "jadlog", date: "2026-02-16", delivered: 10, vpd: "3.00", expenses: "0.00" })
+  for (const date of ["2026-07-20", "2026-07-25", "2026-07-31"]) {
+    out.push({ userId: carla.userId, panel: "jadlog", date, delivered: 50, vpd: "2.00", expenses: "0.00" })
+  }
   out.push({ userId: bruno.userId, panel: "jadlog", date: "2025-12-31", delivered: 40, vpd: "2.00", expenses: "0.00" })
   out.push({ userId: bruno.userId, panel: "jadlog", date: "2026-01-01", delivered: 40, vpd: "2.00", expenses: "0.00" })
   return out.map((r, i) => rec(i + 1, r))

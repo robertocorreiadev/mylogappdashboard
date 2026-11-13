@@ -77,6 +77,12 @@ describe("meses de borda", () => {
     expect(q.second).toEqual({ net: 0, days: 0, lastDay: null })
   })
 
+  it("só a 2ª quinzena, vários dias: datas distintas e último dia 31", () => {
+    const q = netByQuinzena(filterByPeriod(all, 2026, 6))!
+    expect(q.first).toEqual({ net: 0, days: 0 })
+    expect(q.second).toEqual({ net: 300, days: 3, lastDay: 31 })
+  })
+
   it("só o dia 16: 1ª vazia, 2ª com último dia 16", () => {
     const q = netByQuinzena(filterByPeriod(all, 2026, 1))!
     expect(q.first).toEqual({ net: 0, days: 0 })
@@ -84,7 +90,10 @@ describe("meses de borda", () => {
   })
 
   it("virada de ano: o mês de referência é janeiro do ano novo", () => {
-    const turn = all.filter((r) => r.date === "2025-12-31" || r.date === "2026-01-01")
+    // Pelo filtro da tela: dez/2025 e jan/2026 separados certo na virada.
+    expect(filterByPeriod(all, 2025, 11).map((r) => r.date)).toEqual(["2025-12-31"])
+    expect(filterByPeriod(all, 2026, 0).map((r) => r.date)).toEqual(["2026-01-01"])
+    const turn = [...filterByPeriod(all, 2025, 11), ...filterByPeriod(all, 2026, 0)]
     const q = netByQuinzena(turn)!
     expect([q.year, q.month]).toEqual([2026, 0])
     expect(q.first.net).toBe(80)
@@ -99,18 +108,23 @@ describe("meses de borda", () => {
 })
 
 describe("seedTargetAllowed (o seed nunca roda no banco do .env)", () => {
-  const prod = "postgres://u:p@prod.example.neon.tech/neondb?sslmode=require"
+  const prod = "postgres://u:p@ep-abc-123-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require"
   it("sem destino → recusa", () => {
     expect(seedTargetAllowed(undefined, prod)).toBe(false)
     expect(seedTargetAllowed("", prod)).toBe(false)
   })
-  it("mesmo host e banco do DATABASE_URL → recusa, mesmo com outra senha ou parâmetro", () => {
-    expect(seedTargetAllowed(prod, prod)).toBe(false)
-    expect(seedTargetAllowed("postgres://x:y@prod.example.neon.tech/neondb", prod)).toBe(false)
+  it("sem DATABASE_URL para comparar → recusa (não libera por falta de referência)", () => {
+    expect(seedTargetAllowed("postgres://u:p@localhost:5432/mylog_dev", undefined)).toBe(false)
+    expect(seedTargetAllowed("postgres://u:p@localhost:5432/mylog_dev", "")).toBe(false)
   })
-  it("URL inválida → recusa; outro host ou banco → permite", () => {
+  it("mesmo endpoint Neon → recusa, com ou sem -pooler, outra senha, parâmetro ou banco", () => {
+    expect(seedTargetAllowed(prod, prod)).toBe(false)
+    expect(seedTargetAllowed("postgres://x:y@ep-abc-123.c-4.us-east-1.aws.neon.tech/neondb", prod)).toBe(false)
+    expect(seedTargetAllowed("postgres://x:y@EP-ABC-123-POOLER.c-4.us-east-1.aws.neon.tech/outro", prod)).toBe(false)
+  })
+  it("URL inválida → recusa; outro endpoint (branch do Neon) ou outro host → permite", () => {
     expect(seedTargetAllowed("lixo", prod)).toBe(false)
     expect(seedTargetAllowed("postgres://u:p@localhost:5432/mylog_dev", prod)).toBe(true)
-    expect(seedTargetAllowed("postgres://u:p@prod.example.neon.tech/mylog_teste", prod)).toBe(true)
+    expect(seedTargetAllowed("postgres://u:p@ep-xyz-999-pooler.c-4.us-east-1.aws.neon.tech/neondb", prod)).toBe(true)
   })
 })

@@ -6,18 +6,17 @@ import { recordNet } from "@/lib/metrics"
 type Rec = { userId: number; panel: string; date: string; delivered: number; valuePerDelivery: string | number; expenses: string | number }
 
 export type PanelNumbers = { delivered: number; net: number }
-export type MemberStats = { byPanel: Record<string, PanelNumbers>; lastDate: string | null }
+export type MemberStats = { byPanel: Record<string, PanelNumbers> }
 
-/** Por entregador: entregas e líquido de cada painel + data da boleta mais recente. */
+/** Por entregador: entregas e líquido de cada painel (a última boleta é lastBoletaByUser). */
 export function memberStats(records: Rec[]): Map<number, MemberStats> {
   const out = new Map<number, MemberStats>()
   for (const r of records) {
-    const m = out.get(r.userId) ?? { byPanel: {}, lastDate: null }
+    const m = out.get(r.userId) ?? { byPanel: {} }
     const p = m.byPanel[r.panel] ?? { delivered: 0, net: 0 }
     p.delivered += r.delivered
     p.net += recordNet({ delivered: r.delivered, valuePerDelivery: String(r.valuePerDelivery), expenses: String(r.expenses) })
     m.byPanel[r.panel] = p
-    if (!m.lastDate || r.date > m.lastDate) m.lastDate = r.date
     out.set(r.userId, m)
   }
   return out
