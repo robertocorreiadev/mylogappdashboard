@@ -599,9 +599,8 @@ estava (a auditoria registra cada passo, 09:21–09:22):
 - [x] Achado e corrigido: "Copiar" falhava calado quando o navegador não
       liberava a área de transferência. Agora avisa e seleciona o link
       (testado com recusa e sucesso simulados).
-- [ ] Não testado (desconectaria a sessão do usuário, e o Claude não pode
-      entrar com a senha dele): clicar em "Trocar conta" e o login com
-      Google. O destino seguro do "Trocar conta" tem teste automático.
+- [x] "Trocar conta" e login com Google: testados e aprovados pelo usuário
+      em 2026-11-13.
 
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09; feita 2026-11-13)
 - [x] `lib/fixtures/worst-case.ts` + `lib/worst-case.test.ts` (14 testes):

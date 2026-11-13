@@ -92,9 +92,9 @@ pode ser editada; o código pede `verify-full` (`lib/db/ssl-mode.ts`).
 
 **⏭️ Próxima sessão — o que ficou para o usuário (credencial, sessão dele
 ou decisão dele):**
-1. Testar o login com Google e o "Trocar conta" (os dois desconectam a
-   sessão; o Claude não pode entrar de novo com a senha).
-2. Criar um banco de teste (branch do Neon) e rodar
+- ✅ Login com Google e "Trocar conta": testados e aprovados pelo usuário
+  em 2026-11-13.
+1. (Opcional) Criar um banco de teste (branch do Neon) e rodar
    `scripts/seed-worst-case.ts` (a connection string tem senha).
 
 (Hook de triagem de investimento: lote da revisão de 2026-11-09 instalado em
