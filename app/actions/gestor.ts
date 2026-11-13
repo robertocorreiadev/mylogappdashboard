@@ -91,6 +91,8 @@ export async function getAuditLog(known?: MembershipContext) {
     entityId: auditLogs.entityId,
     action: auditLogs.action,
     fieldChanges: auditLogs.fieldChanges,
+    snapshotBefore: auditLogs.snapshotBefore,
+    snapshotAfter: auditLogs.snapshotAfter,
     createdAt: auditLogs.createdAt,
     actorName: users.name,
   })
@@ -111,6 +113,8 @@ export async function getAuditLogGlobal() {
     entityId: auditLogs.entityId,
     action: auditLogs.action,
     fieldChanges: auditLogs.fieldChanges,
+    snapshotBefore: auditLogs.snapshotBefore,
+    snapshotAfter: auditLogs.snapshotAfter,
     createdAt: auditLogs.createdAt,
     actorName: users.name,
     orgName: organizations.name,

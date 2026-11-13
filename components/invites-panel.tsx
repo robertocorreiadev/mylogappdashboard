@@ -2,7 +2,8 @@
 
 import { toast } from "sonner"
 import { useState, useTransition } from "react"
-import { Mail, Copy, X, Check, ShieldOff } from "lucide-react"
+import { Mail, Copy, X, Check, ShieldOff, Share2 } from "lucide-react"
+import { ConfirmButton } from "@/components/confirm-dialog"
 import { createInvite, revokeInvite, revokeAllPendingInvites } from "@/app/actions/invites"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,7 +32,7 @@ function NewInviteDialog({ onCreated }: { onCreated: (url: string) => void }) {
       const res = await createInvite(fd)
       onCreated(res.url)
       setOpen(false)
-      toast.success("Link de convite gerado", { description: "Copie e envie ao entregador." })
+      toast.success("Link de convite gerado", { description: "Compartilhe ou copie e envie ao entregador." })
     })
   }
 
@@ -40,7 +41,7 @@ function NewInviteDialog({ onCreated }: { onCreated: (url: string) => void }) {
       <DialogTrigger render={<Button size="sm" className="gap-2" />}>
         <Mail className="h-4 w-4" /> Convidar entregador
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Novo convite</DialogTitle>
           <DialogDescription>Gera um link de convite para um entregador entrar na sua organização.</DialogDescription>
@@ -77,7 +78,6 @@ function NewInviteDialog({ onCreated }: { onCreated: (url: string) => void }) {
 }
 
 export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; acceptedInvites: AcceptedInvite[] }) {
-  const [isPending, startTransition] = useTransition()
   const [link, setLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -90,6 +90,15 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
     })
   }
 
+  // Celular: abre a folha de compartilhar do sistema (WhatsApp, SMS...).
+  // Sem suporte (a maioria dos desktops), copia o link.
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function"
+  function handleShare() {
+    if (!link) return
+    navigator.share({ title: "Convite MyLog", text: "Entre na nossa operação no MyLog:", url: link })
+      .catch(() => { /* o usuário fechou a folha: nada a fazer */ })
+  }
+
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
@@ -97,16 +106,17 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
           <h2 className="text-base font-semibold text-foreground">Convites</h2>
           <div className="flex items-center gap-2">
             {invites.length > 0 && (
-              <Button
-                size="sm" variant="ghost" className="gap-1.5 text-muted-foreground hover:text-destructive"
-                disabled={isPending}
-                onClick={() => startTransition(async () => {
-                  await revokeAllPendingInvites()
-                  toast.success("Convites pendentes revogados")
-                })}
+              <ConfirmButton
+                title={`Revogar ${invites.length === 1 ? "o convite pendente" : `os ${invites.length} convites pendentes`}?`}
+                description="Os links param de funcionar na hora. Essa ação não pode ser desfeita."
+                confirmLabel="Revogar"
+                pendingLabel="Revogando..."
+                onConfirm={() => revokeAllPendingInvites()}
+                onDone={() => toast.success("Convites pendentes revogados")}
+                buttonProps={{ size: "sm", variant: "ghost", className: "gap-1.5 text-muted-foreground hover:text-destructive" }}
               >
-                <ShieldOff className="h-3.5 w-3.5" /> Revogar todos
-              </Button>
+                <ShieldOff className="h-3.5 w-3.5" aria-hidden="true" /> Revogar todos
+              </ConfirmButton>
             )}
             <NewInviteDialog onCreated={(url) => { setLink(url); setCopied(false) }} />
           </div>
@@ -115,6 +125,11 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
         {link && (
           <div className="mb-4 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
             <span className="flex-1 truncate font-mono">{link}</span>
+            {canShare && (
+              <Button size="sm" className="gap-1" onClick={handleShare}>
+                <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Compartilhar
+              </Button>
+            )}
             <Button size="sm" variant="ghost" className="gap-1" onClick={handleCopy}>
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? "Copiado" : "Copiar"}
@@ -131,17 +146,20 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
                 <span className="text-muted-foreground">
                   {inv.email ?? "Link genérico"} · expira {formatDate(inv.expiresAt)}
                 </span>
-                <Button
-                  variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  disabled={isPending}
-                  onClick={() => startTransition(async () => {
-                    await revokeInvite(inv.id)
-                    toast.success("Convite revogado")
-                  })}
-                  aria-label="Revogar convite"
+                <ConfirmButton
+                  title="Revogar este convite?"
+                  description={`O link ${inv.email ? `de ${inv.email} ` : ""}para de funcionar na hora. Essa ação não pode ser desfeita.`}
+                  confirmLabel="Revogar"
+                  pendingLabel="Revogando..."
+                  onConfirm={() => revokeInvite(inv.id)}
+                  onDone={() => toast.success("Convite revogado")}
+                  buttonProps={{
+                    variant: "ghost", size: "icon", className: "h-7 w-7 text-muted-foreground hover:text-destructive",
+                    "aria-label": `Revogar convite ${inv.email ?? "genérico"}`,
+                  }}
                 >
                   <X className="h-4 w-4" />
-                </Button>
+                </ConfirmButton>
               </li>
             ))}
           </ul>

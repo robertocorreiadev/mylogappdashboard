@@ -866,38 +866,39 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
 
 ### 11.9 Gestor
 
-**`/gestor`** (`app/gestor/page.tsx`), de cima para baixo:
-1. Cabeçalho `"Painel do Gestor"` / `"Visão da sua organização"`. (A auditoria saiu daqui: fica na barra de navegação.)
-2. `StatsOverview` com os dados da organização inteira. **[DEFEITO D6]**
-3. `"Composição por painel"`: um cartão por painel (os padrões sempre aparecem) com `"{n} entregas"` e o líquido.
-4. `InvitesPanel`.
-5. `"Entregadores ({n})"`:
-   - um cartão-link por entregador → `/gestor/entregadores/{id}?from=gestor`, com nome, e-mail, `"{n} entregas"` e líquido somado de todos os painéis;
-   - vazio → `"Nenhum entregador nesta organização ainda"` + `Use "Convidar entregador" acima para gerar um link de convite.`.
+**`/gestor`** (`app/gestor/page.tsx` busca; `components/gestor-overview.tsx` calcula e mostra), de cima para baixo:
+1. Cabeçalho `"Painel do Gestor"` / `"Visão da sua organização"`. (A auditoria fica na barra de navegação.)
+2. Filtro de período (`PeriodFilter`, boletas + lançamentos da organização).
+3. **Seletor de painel** (`role="group" aria-label="Painel"`, botões com `aria-pressed`, 2 colunas do `sm` para cima): um botão por painel (os padrões sempre aparecem, `panelSummaries`, `lib/gestor-stats.ts`) com o nome na cor do painel, `"{n} entregas"` e o líquido do período. Padrão: JADLOG. Ativo = borda na cor do painel.
+4. `StatsOverview` **só do painel escolhido** (boletas, pacotes e lançamentos daquele painel, no período; o Painel 2 em azul). Corrige o D6: os painéis nunca são somados.
+5. `"Entregadores ({n})"` com busca (`aria-label "Buscar entregador"`, `"Buscar nome ou e-mail"`, sem acentos nem maiúsculas):
+   - um cartão-link por entregador → `/gestor/entregadores/{id}?from=gestor`, com nome, e-mail, **uma linha por painel** (`"{n} entregas"` + líquido no período, `memberStats`) e `"Última boleta: {DD/MM/AAAA}"` (de todas as boletas) ou `"Sem boletas"`;
+   - vazio → `"Nenhum entregador nesta organização ainda"` + `Use "Convidar entregador" em Convites para gerar um link de convite.`; busca sem resultado → `"Nenhum entregador com essa busca."`.
+6. `InvitesPanel`.
 
 **`InvitesPanel`** (`components/invites-panel.tsx`):
 1. Título `"Convites"`.
-2. Botão `"Revogar todos"` (quando há pendentes).
-3. Botão `"Convidar entregador"` → modal `"Novo convite"` / `"Gera um link de convite para um entregador entrar na sua organização."`. Campos:
+2. Botão `"Revogar todos"` (quando há pendentes) → confirmação `"Revogar o convite pendente?"` / `"Revogar os {n} convites pendentes?"`, `"Os links param de funcionar na hora. Essa ação não pode ser desfeita."`, botão `"Revogar"` (`"Revogando..."`).
+3. Botão `"Convidar entregador"` → modal `"Novo convite"` / `"Gera um link de convite para um entregador entrar na sua organização."` (`sm:max-w-md`). Campos:
    - `"E-mail (opcional)"` (`"Deixe em branco para link genérico"`), com a ajuda `"Se preenchido, só essa conta pode aceitar o convite."`;
    - `"Expira em"`: `"1 dia"` / `"7 dias"` (padrão) / `"30 dias"` / `"Sem expiração"`.
 
-   Botão `"Gerar link"` (`"Gerando..."`).
-4. O link gerado aparece numa caixa com o botão `"Copiar"`, que muda para `"Copiado"` por 2 s.
-5. Lista de pendentes: `"{email | Link genérico} · expira {DD/MM/AAAA}"` + botão X para revogar. Vazia → `"Nenhum convite pendente."`.
+   Botão `"Gerar link"` (`"Gerando..."`). Toast `"Link de convite gerado"` / `"Compartilhe ou copie e envie ao entregador."`.
+4. O link gerado aparece numa caixa com `"Compartilhar"` (só onde o navegador tem `navigator.share`, como no celular: abre a folha do sistema com título `"Convite MyLog"`, texto `"Entre na nossa operação no MyLog:"` e o link) e `"Copiar"` (muda para `"Copiado"` por 2 s).
+5. Lista de pendentes: `"{email | Link genérico} · expira {DD/MM/AAAA}"` + botão X (`aria-label "Revogar convite {email | genérico}"`) → confirmação `"Revogar este convite?"` / `"O link [de {email}] para de funcionar na hora. Essa ação não pode ser desfeita."`. Vazia → `"Nenhum convite pendente."`.
 6. Botão `"Ver"` / `"Ocultar"` `"histórico de convites aceitos ({n})"`. Cada item: `"{nome} aceitou {o convite de email | um convite} em {data}"`. Vazio → `"Nenhum convite aceito ainda."`.
 
 **Drill-down** `/gestor/entregadores/[userId]` (`MemberPanelTabs`):
 - Cabeçalho com o nome do entregador e `viewerMode` (§11.3); o "Voltar" segue o `?from=` (§8).
-- Uma aba por painel. Cada aba tem só `DashboardTabs`; os cartões do topo vêm dele e seguem o filtro de período.
+- **Seletor de painel** (não abas dentro de abas): `"Painel"` + um botão-pílula por painel (`aria-pressed`; ativo = fundo na cor do painel). Abaixo, só o `DashboardTabs` do painel escolhido (com `key`: trocar de painel zera filtro e aba). No Painel 2 a área fica azul (`data-panel`) e o `PanelTheme` leva o azul aos modais.
 - Gestor: `readOnly` (sem formulários nem botões de editar ou excluir; o CSV continua disponível).
 - Admin: escrita habilitada com as ações admin.
 
-**Auditoria** `/gestor/auditoria` (`AuditLogRow`, `components/audit-log-row.tsx`):
-- Header `"Auditoria"` e título `"Histórico de edições ({n})"`; para o admin, `"Histórico de edições ({n}) · todas as organizações"`.
-- Na visão do admin, cada item mostra também o nome da organização num selo cinza.
-- Cada item: `"{ator} {criou|editou|excluiu} {boleta diária|entrega|lançamento financeiro|entrada de auditoria|usuário} #{id}"` + data.
-- Abaixo do item vêm as mudanças, no formato `"{campo}: ~~antigo~~ → novo"`. Nomes dos campos:
+**Auditoria** `/gestor/auditoria` (`AuditLogList` e `AuditLogRow`, `components/audit-log-row.tsx`):
+- Título `"Histórico de edições ({n})"`; para o admin, `"Histórico de edições ({n}) · todas as organizações"`.
+- Filtros: `<select aria-label="Quem fez">` (`"Todas as pessoas"` + autores) e `<select aria-label="Tipo de registro">` (`"Todos os tipos"`, `"Boletas"`, `"Pacotes"`, `"Lançamentos"`, `"Usuários"`, `"Entradas de auditoria"`, só os que existem). Mostra 50 por vez; `"Mostrar mais ({n} restantes)"`. Sem resultado → `"Nenhuma edição com esse filtro."`; sem nenhuma → `"Nenhuma edição registrada ainda."`.
+- Cada item: `"{ator} {criou|editou|excluiu} {item}"`, com o item pelo nome (`auditItemLabel`, `lib/audit-format.ts`, a partir de `snapshotAfter` ou `snapshotBefore`): `"boleta de {DD/MM/AAAA}"`, `"pacote {código}"`, `"lançamento \"{descrição}\""`, `"usuário {nome}"`, `"entrada de auditoria #{id}"`; sem foto → `"{tipo} #{id}"`. Embaixo: data e hora `"DD/MM/AAAA HH:MM"` (`formatDateTime`) e, para o admin, o selo da organização.
+- Mudanças: `"{campo}: ~~antigo~~ → novo"`, com valores formatados (`formatAuditValue`): dinheiro em R$ (`valuePerDelivery`, `expenses`, `value`, `amount`), datas em DD/MM/AAAA (`date`, `deadline`), status e tipo com rótulo, vazio → `"—"`. Nomes dos campos:
 
   | Campo | Nome na tela |
   |---|---|
@@ -918,8 +919,10 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
   | `city` | cidade |
   | `trackingCode` | código de rastreio |
 
-- Admin: botão de lixeira com o title `"Excluir entrada de auditoria (ADMIN MASTER) — fica registrado quem excluiu"`. O item some quando o servidor confirma.
-- Vazio → `"Nenhuma edição registrada ainda."`.
+- Admin: lixeira (title `"Excluir entrada de auditoria (ADMIN MASTER) — fica registrado quem excluiu"`) → confirmação `"Excluir esta entrada de auditoria?"` / `"A exclusão também fica registrada, com você como autor. Essa ação não pode ser desfeita."`. O item some quando o servidor confirma.
+- `getAuditLog` e `getAuditLogGlobal` trazem também `snapshotBefore` e `snapshotAfter`.
+
+**`ConfirmButton`** (`components/confirm-dialog.tsx`): botão + modal de confirmação genérico (título, descrição, `confirmLabel`/`pendingLabel`, padrão `"Excluir"`/`"Excluindo..."`; foco inicial em `"Cancelar"`). Se a action devolver `{ error }`, o erro aparece no modal e ele não fecha; se lançar, `"Não foi possível concluir. Atualize a página e tente de novo."`. O `ConfirmDeleteButton` usa ele.
 
 ### 11.10 Convite — `/convite/[token]`
 
@@ -1042,11 +1045,12 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **128/128**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **138/138**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
+| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime`; `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado) |
 | `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos) |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
@@ -1103,11 +1107,10 @@ Reconstruir **sem** estes defeitos. Para corrigir no sistema atual, abrir uma ta
 
 Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D7** (convites vencidos listados como pendentes), **D11** (modais do Painel 2 sem o tema), **D13** (excluir sem confirmação), **D2** (data "hoje" em UTC), **D3** (validação no servidor), **D9** (auditoria do `adminSaveDailyRecord`), **D12** (actions lançavam exceção), **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
 
-Corrigidos em 2026-11-13: **D8** (exclusão de usuário em cascata, §9.6), **D10** (auditoria global do admin, §7.2 e §11.9) e **D15** (o tema claro pinta certo no `next dev` e no build, conferido em 2026-11-09; guarda em `lib/theme-tokens.test.ts`).
+Corrigidos em 2026-11-13: **D6** (cartões do `/gestor` por painel, §11.9), **D8** (exclusão de usuário em cascata, §9.6), **D10** (auditoria global do admin, §7.2 e §11.9) e **D15** (o tema claro pinta certo no `next dev` e no build, conferido em 2026-11-09; guarda em `lib/theme-tokens.test.ts`).
 
 | ID | Onde | Defeito | Correção |
 |---|---|---|---|
-| D6 | `app/gestor/page.tsx` | Os cartões do topo somam os dois painéis, contra a regra de nunca somar painéis. | Mostrar só a composição por painel, ou cartões por painel. |
 
 Limites aceitos (não são defeitos): o limite de tentativas fica em memória (§6.3); a sessão dura 365 dias e não pode ser revogada (§6.2); o cookie de state do OAuth só vence depois de 10 min.
 

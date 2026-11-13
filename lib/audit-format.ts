@@ -1,0 +1,68 @@
+// Texto da tela de auditoria (funções puras).
+import { formatCurrency, formatDate, statusLabel } from "@/lib/format"
+
+type AuditRef = { entityType: string; entityId: number; snapshotBefore: unknown; snapshotAfter: unknown }
+
+function snapshotField(ref: AuditRef, key: string): string | null {
+  for (const snap of [ref.snapshotAfter, ref.snapshotBefore]) {
+    if (snap && typeof snap === "object" && key in snap) {
+      const v = (snap as Record<string, unknown>)[key]
+      if (v !== null && v !== undefined && String(v) !== "") return String(v)
+    }
+  }
+  return null
+}
+
+const ENTITY_NOUN: Record<string, string> = {
+  daily_record: "boleta",
+  delivery: "pacote",
+  transaction: "lançamento",
+  audit_log_entry: "entrada de auditoria",
+  user: "usuário",
+}
+
+/** Nome do item no histórico: "boleta de 12/11/2026", "pacote JL1BR", 'lançamento "X"'. */
+export function auditItemLabel(ref: AuditRef): string {
+  const noun = ENTITY_NOUN[ref.entityType] ?? ref.entityType
+  const fallback = `${noun} #${ref.entityId}`
+  switch (ref.entityType) {
+    case "daily_record": {
+      const d = snapshotField(ref, "date")
+      return d ? `boleta de ${formatDate(d)}` : fallback
+    }
+    case "delivery": {
+      const c = snapshotField(ref, "trackingCode")
+      return c ? `pacote ${c}` : fallback
+    }
+    case "transaction": {
+      const t = snapshotField(ref, "description")
+      return t ? `lançamento "${t}"` : fallback
+    }
+    case "user": {
+      const n = snapshotField(ref, "name")
+      return n ? `usuário ${n}` : fallback
+    }
+    default:
+      return fallback
+  }
+}
+
+const MONEY_FIELDS = new Set(["valuePerDelivery", "expenses", "value", "amount"])
+const DATE_FIELDS = new Set(["date", "deadline"])
+
+/** Valor antigo/novo de um campo, como o usuário lê na tela. */
+export function formatAuditValue(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—"
+  if (MONEY_FIELDS.has(field)) return formatCurrency(Number(value))
+  if (DATE_FIELDS.has(field)) return formatDate(String(value))
+  if (field === "status") return statusLabel(String(value))
+  if (field === "type") return value === "receita" ? "Receita" : value === "despesa" ? "Despesa" : String(value)
+  return String(value)
+}
+
+/** "13/11/2026 09:05" (hora local). */
+export function formatDateTime(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(d) : d
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(date.getHours())}:${p(date.getMinutes())}`
+}

@@ -505,6 +505,27 @@ Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheer
 - [ ] Limite aceito: digitar "1.234,56" tecla a tecla vira 1,23 (o primeiro
       separador é o decimal); colado de uma vez fica 1234,56.
 
+## Redesign de layout — Fase 4: gestor (2026-11-13)
+- [x] D6: `/gestor` com seletor de painel e cartões só do painel escolhido
+      (os painéis nunca são somados); filtro de período.
+- [x] Entregadores com busca, números por painel e "Última boleta".
+- [x] Drill-down: seletor de painel no lugar de abas dentro de abas;
+      Painel 2 azul também nos modais.
+- [x] Convites: "Compartilhar" (`navigator.share`) e confirmação ao revogar
+      (um e todos). `ConfirmButton` genérico (`components/confirm-dialog.tsx`).
+- [x] Auditoria: nome do item, data com hora, valores formatados, filtros
+      por pessoa e tipo, 50 por vez, confirmação ao excluir.
+- [x] Testes: `lib/gestor-helpers.test.ts` (10). Total 138/138.
+- [x] Smoke test (DOM, o screenshot do Chrome travou): seletor de painel
+      (JADLOG 6608 / Painel 2 908 entregas = os 7516 do cartão somado
+      antigo), cartões de entregador por painel, auditoria (itens pelo nome,
+      hora, R$, filtro por tipo), drill-down (347 → 0 ao trocar de painel,
+      `<body data-panel>` azul).
+- [ ] Não testado: criar/compartilhar/revogar convite (grava no banco de
+      produção; não há pendentes) e excluir entrada de auditoria.
+- [ ] Ideia: convites como seção recolhível (ficou como card abaixo dos
+      entregadores).
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

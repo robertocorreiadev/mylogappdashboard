@@ -1,16 +1,11 @@
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Users } from "lucide-react"
 import { requireGestor } from "@/app/actions/auth"
 import { getOrgOverview } from "@/app/actions/gestor"
 import { listPendingInvites, listAcceptedInvites } from "@/app/actions/invites"
 import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { StatsOverview } from "@/components/stats-overview"
+import { GestorOverview } from "@/components/gestor-overview"
 import { InvitesPanel } from "@/components/invites-panel"
-import { Card, CardContent } from "@/components/ui/card"
-import { formatCurrency, panelLabel, PANEL_LABELS } from "@/lib/format"
-import { recordGross, recordNet } from "@/lib/metrics"
 
 export default async function GestorPage() {
   let ctx
@@ -26,98 +21,13 @@ export default async function GestorPage() {
     listAcceptedInvites(ctx),
   ])
 
-  // Resumo por entregador — agregado em memória a partir dos dados já
-  // buscados (organização pequena; não justifica GROUP BY no banco ainda).
-  const byUser = new Map<number, { delivered: number; net: number }>()
-  for (const r of dailyRecords) {
-    const cur = byUser.get(r.userId) ?? { delivered: 0, net: 0 }
-    cur.delivered += r.delivered
-    cur.net += recordNet(r)
-    byUser.set(r.userId, cur)
-  }
-
-  // Composição por painel — nunca mescla os painéis num total só, para o
-  // gestor ver onde (em qual contrato/transportadora) a operação performou.
-  const byPanel = new Map<string, { delivered: number; gross: number; expenses: number }>()
-  for (const key of Object.keys(PANEL_LABELS)) byPanel.set(key, { delivered: 0, gross: 0, expenses: 0 })
-  for (const r of dailyRecords) {
-    const cur = byPanel.get(r.panel) ?? { delivered: 0, gross: 0, expenses: 0 }
-    cur.delivered += r.delivered
-    cur.gross += recordGross(r)
-    cur.expenses += Number(r.expenses)
-    byPanel.set(r.panel, cur)
-  }
-
+  // Os números (por painel, por entregador, no período) são calculados no
+  // cliente (GestorOverview), que tem o filtro de período e o seletor de painel.
   return (
     <AppShell user={ctx.user}>
       <DashboardHeader title="Painel do Gestor" subtitle="Visão da sua organização" />
-
-      <StatsOverview deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
-
-      <Card className="mb-6">
-        <CardContent className="p-4 md:p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Composição por painel</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Array.from(byPanel.entries()).map(([panel, stats]) => {
-              const net = stats.gross - stats.expenses
-              return (
-                <div key={panel} className="rounded-lg border border-border p-4">
-                  <p className="text-sm font-semibold text-foreground">{panelLabel(panel)}</p>
-                  <div className="mt-2 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{stats.delivered} entregas</span>
-                    <span className={`font-mono font-semibold ${net >= 0 ? "text-[var(--chart-2)]" : "text-destructive"}`}>
-                      {formatCurrency(net)}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="mb-6">
-        <InvitesPanel invites={pendingInvites} acceptedInvites={acceptedInvites} />
-      </div>
-
-      <Card>
-        <CardContent className="p-4 md:p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Entregadores ({members.length})</h2>
-
-          {members.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Users className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">Nenhum entregador nesta organização ainda</p>
-              <p className="text-xs text-muted-foreground">
-                Use &quot;Convidar entregador&quot; acima para gerar um link de convite.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {members.map((m) => {
-                const stats = byUser.get(m.userId)
-                const net = stats?.net ?? 0
-                return (
-                  <Link
-                    key={m.userId}
-                    href={`/gestor/entregadores/${m.userId}?from=gestor`}
-                    className="rounded-lg border border-border p-4 outline-none transition-colors hover:border-primary/50 hover:bg-secondary/40 focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <p className="font-semibold text-foreground">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.email}</p>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{stats?.delivered ?? 0} entregas</span>
-                      <span className={`font-mono font-semibold ${net >= 0 ? "text-[var(--chart-2)]" : "text-destructive"}`}>
-                        {formatCurrency(net)}
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <GestorOverview dailyRecords={dailyRecords} deliveries={deliveries} transactions={transactions} members={members} />
+      <InvitesPanel invites={pendingInvites} acceptedInvites={acceptedInvites} />
     </AppShell>
   )
 }

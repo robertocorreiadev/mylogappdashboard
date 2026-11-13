@@ -56,7 +56,14 @@ tsc limpo, 110/110, build ok, smoke test no navegador ok. Commit + push em
 
 **Fase 3 (telas do entregador) — feita (2026-11-13).**
 tsc limpo, 128/128, build ok, smoke test no navegador ok (sem gravar no
-banco). Commit + push em 2026-11-13. **Próximo:** Fase 4 (gestor, inclui D6).
+banco). Commit + push em 2026-11-13. 
+
+**Fases 4 a 6 — autorizadas pelo usuário em 2026-11-13 ("pode seguir todas
+as fases e revisar no final"): commits locais, push só depois da revisão
+final do usuário.**
+
+**Fase 4 (gestor, D6) — commit local (2026-11-13).** 138/138. Detalhe no
+`TODO.md`. **Próximo:** Fase 5 (admin e primeiro acesso).
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

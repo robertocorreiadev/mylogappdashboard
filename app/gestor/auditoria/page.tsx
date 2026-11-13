@@ -5,7 +5,7 @@ import { isAdminEmail } from "@/lib/auth"
 import { getAuditLog, getAuditLogGlobal } from "@/app/actions/gestor"
 import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { AuditLogRow } from "@/components/audit-log-row"
+import { AuditLogList } from "@/components/audit-log-row"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default async function AuditoriaPage() {
@@ -49,15 +49,7 @@ export default async function AuditoriaPage() {
             </h2>
           </div>
 
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma edição registrada ainda.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {logs.map((log) => (
-                <AuditLogRow key={log.id} log={log} canDelete={canDelete} />
-              ))}
-            </ul>
-          )}
+          <AuditLogList logs={logs} canDelete={canDelete} />
         </CardContent>
       </Card>
     </AppShell>
