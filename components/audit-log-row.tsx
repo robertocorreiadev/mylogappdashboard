@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react"
 import { adminDeleteAuditLogEntry } from "@/app/actions/admin-override"
 import { ConfirmButton } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
-import { auditItemLabel, formatAuditValue, formatDateTime } from "@/lib/audit-format"
+import { formatAuditValue, formatDateTime } from "@/lib/audit-format"
 
 const ACTION_LABELS: Record<string, string> = { create: "criou", update: "editou", delete: "excluiu" }
 const ENTITY_FILTER: Record<string, string> = {
@@ -34,17 +34,18 @@ export type LogEntry = {
   entityId: number
   action: string
   fieldChanges: unknown
-  snapshotBefore: unknown
-  snapshotAfter: unknown
+  /** Montado no servidor (auditItemLabel): as fotos do registro não vêm ao navegador. */
+  itemLabel: string
   createdAt: Date
   actorName: string
+  actorUserId: number
   /** Só na visão global do admin master (D10). */
   orgName?: string
 }
 
 export function AuditLogRow({ log, canDelete = false, onRemoved }: { log: LogEntry; canDelete?: boolean; onRemoved?: () => void }) {
   const changes = Array.isArray(log.fieldChanges) ? log.fieldChanges as { field: string; old: unknown; new: unknown }[] : []
-  const item = auditItemLabel(log)
+  const item = log.itemLabel
 
   return (
     <li className="flex items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm">
@@ -98,10 +99,20 @@ export function AuditLogList({ logs, canDelete = false }: { logs: LogEntry[]; ca
   const [entity, setEntity] = useState("all")
   const [limit, setLimit] = useState(PAGE)
 
-  const actors = useMemo(() => Array.from(new Set(logs.map((l) => l.actorName))).sort((a, b) => a.localeCompare(b, "pt-BR")), [logs])
+  // Chave = id do autor: dois usuários com o mesmo nome não viram uma opção só.
+  const actors = useMemo(() => {
+    const byId = new Map<number, string>()
+    for (const l of logs) byId.set(l.actorUserId, l.actorName)
+    return [...byId].sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))
+  }, [logs])
+  const dupNames = useMemo(() => {
+    const seen = new Map<string, number>()
+    for (const [, name] of actors) seen.set(name, (seen.get(name) ?? 0) + 1)
+    return seen
+  }, [actors])
   const entities = useMemo(() => Array.from(new Set(logs.map((l) => l.entityType))), [logs])
   const visible = useMemo(
-    () => logs.filter((l) => !removed.has(l.id) && (actor === "all" || l.actorName === actor) && (entity === "all" || l.entityType === entity)),
+    () => logs.filter((l) => !removed.has(l.id) && (actor === "all" || String(l.actorUserId) === actor) && (entity === "all" || l.entityType === entity)),
     [logs, removed, actor, entity],
   )
 
@@ -112,7 +123,9 @@ export function AuditLogList({ logs, canDelete = false }: { logs: LogEntry[]; ca
       <div className="mb-4 flex flex-wrap gap-2">
         <select aria-label="Quem fez" className={selectClass} value={actor} onChange={(e) => { setActor(e.target.value); setLimit(PAGE) }}>
           <option value="all">Todas as pessoas</option>
-          {actors.map((a) => <option key={a} value={a}>{a}</option>)}
+          {actors.map(([id, name]) => (
+            <option key={id} value={id}>{(dupNames.get(name) ?? 0) > 1 ? `${name} (#${id})` : name}</option>
+          ))}
         </select>
         <select aria-label="Tipo de registro" className={selectClass} value={entity} onChange={(e) => { setEntity(e.target.value); setLimit(PAGE) }}>
           <option value="all">Todos os tipos</option>
@@ -120,7 +133,9 @@ export function AuditLogList({ logs, canDelete = false }: { logs: LogEntry[]; ca
         </select>
       </div>
       {visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma edição com esse filtro.</p>
+        <p className="text-sm text-muted-foreground">
+          {actor === "all" && entity === "all" ? "Nenhuma edição registrada ainda." : "Nenhuma edição com esse filtro."}
+        </p>
       ) : (
         <>
           <ul className="flex flex-col gap-2">

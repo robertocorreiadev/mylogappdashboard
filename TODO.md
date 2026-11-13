@@ -549,6 +549,34 @@ Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheer
 - [ ] Ideia futura: recuperação de senha por e-mail (precisa de serviço de
       e-mail).
 
+## Redesign — revisão de código das Fases 4 e 5 (`/code-review medium`, 2026-11-13)
+Corrigidos:
+- [x] Hora da auditoria dependia do fuso da máquina (servidor UTC ≠
+      navegador BRT → erro de hidratação e hora errada): fuso fixo
+      `America/Sao_Paulo` + teste da meia-noite UTC.
+- [x] `ConfirmDialog` mantinha o erro da tentativa anterior ao reabrir.
+- [x] `/gestor`: "dias trabalhados" e "Média/dia" contavam uma boleta por
+      entregador por dia (140 → 122 dias no JADLOG); agora datas distintas.
+      Já estava errado antes do redesign.
+- [x] Auditoria mandava as fotos completas dos registros (endereços,
+      valores, entradas aninhadas) para o navegador: o nome do item é
+      montado no servidor e as fotos ficam lá.
+- [x] Filtro "Quem fez" juntava homônimos: chave = `actorUserId`.
+- [x] Depois de excluir tudo sem filtro, aparecia "com esse filtro".
+Não é defeito:
+- O gatilho do `ConfirmButton` não fica desabilitado durante a ação: o
+  modal fica aberto e bloqueado enquanto ela roda; um segundo clique depois
+  abre outra confirmação.
+Débito (eficiência/repetição, para uma tarefa própria):
+- [ ] `gestor-overview.tsx` roda `memberStats` duas vezes (uma só para a
+      última boleta); trocar por um `max` por usuário.
+- [ ] Mapa painel → cor repetido em `gestor-overview.tsx`,
+      `member-panel-tabs.tsx` e `app-nav.tsx`; `norm()` repetido em
+      `gestor-overview.tsx` e `lib/package-filter.ts`. Exportar um só (ex.:
+      `PANEL_COLORS` em `lib/format.ts` e `normalizeSearch` em `lib/`).
+- [ ] `ENTITY_FILTER` e `fieldLabel` em `audit-log-row.tsx` repetem
+      `ENTITY_NOUN` de `lib/audit-format.ts`; mover tudo para lá.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

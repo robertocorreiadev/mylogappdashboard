@@ -66,7 +66,13 @@ final do usuário.**
 `TODO.md`.
 
 **Fase 5 (admin e primeiro acesso) — commit local (2026-11-13).** 141/141.
-**Próximo:** Fase 6 (fechamento) e revisão final com o usuário; depois push.
+
+
+**Fase 6 (fechamento) — feita (2026-11-13).** Revisão de código das Fases 4
+e 5: 6 correções, 1 "não é defeito", 3 débitos (seção no `TODO.md`). Spec
+§14.2 (critérios de aceite) atualizada. 142/142, build ok.
+**Falta:** revisão final do usuário e **push** de 3 commits locais
+(Fases 4, 5 e as correções da revisão) — só com o OK dele.
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

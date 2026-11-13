@@ -9,6 +9,17 @@ import {
   dailyRecordsForUserAllPanels, deliveriesForUserAllPanels, transactionsForUserAllPanels,
 } from "@/lib/db/scopes"
 import { panelLabel, PANEL_LABELS } from "@/lib/format"
+import { auditItemLabel } from "@/lib/audit-format"
+
+// As fotos completas (snapshotBefore/After) ficam no servidor: o navegador
+// recebe só o nome do item (revisão de 2026-11-13: endereços, valores e
+// entradas aninhadas iam inteiros para a página).
+function withItemLabel<T extends { entityType: string; entityId: number; snapshotBefore: unknown; snapshotAfter: unknown }>(rows: T[]) {
+  return rows.map(({ snapshotBefore, snapshotAfter, ...r }) => ({
+    ...r,
+    itemLabel: auditItemLabel({ entityType: r.entityType, entityId: r.entityId, snapshotBefore, snapshotAfter }),
+  }))
+}
 
 // `known` deixa o chamador reaproveitar um requireGestor() já resolvido no
 // mesmo request (ex.: a página resolve uma vez e repassa pras funções que
@@ -85,7 +96,7 @@ export async function getMemberDashboardData(targetUserId: number, known?: Membe
 // lib/audit.ts). Limitado às 200 entradas mais recentes da organização.
 export async function getAuditLog(known?: MembershipContext) {
   const { organizationId } = known ?? await requireGestor()
-  return db.select({
+  const rows = await db.select({
     id: auditLogs.id,
     entityType: auditLogs.entityType,
     entityId: auditLogs.entityId,
@@ -95,19 +106,21 @@ export async function getAuditLog(known?: MembershipContext) {
     snapshotAfter: auditLogs.snapshotAfter,
     createdAt: auditLogs.createdAt,
     actorName: users.name,
+    actorUserId: auditLogs.actorUserId,
   })
     .from(auditLogs)
     .innerJoin(users, eq(users.id, auditLogs.actorUserId))
     .where(eq(auditLogs.organizationId, organizationId))
     .orderBy(desc(auditLogs.createdAt))
     .limit(200)
+  return withItemLabel(rows)
 }
 
 // D10: auditoria de TODAS as organizações — só o admin master (ADMIN_EMAIL).
 // Gestor continua restrito à própria organização (getAuditLog acima).
 export async function getAuditLogGlobal() {
   await requireAdmin()
-  return db.select({
+  const rows = await db.select({
     id: auditLogs.id,
     entityType: auditLogs.entityType,
     entityId: auditLogs.entityId,
@@ -117,6 +130,7 @@ export async function getAuditLogGlobal() {
     snapshotAfter: auditLogs.snapshotAfter,
     createdAt: auditLogs.createdAt,
     actorName: users.name,
+    actorUserId: auditLogs.actorUserId,
     orgName: organizations.name,
   })
     .from(auditLogs)
@@ -124,4 +138,5 @@ export async function getAuditLogGlobal() {
     .innerJoin(organizations, eq(organizations.id, auditLogs.organizationId))
     .orderBy(desc(auditLogs.createdAt))
     .limit(300)
+  return withItemLabel(rows)
 }

@@ -58,7 +58,8 @@ export function StatsOverview({
   const totalGross     = dailyRecords.reduce((s, r) => s + recordGross(r), 0)
   const totalExpDR     = dailyRecords.reduce((s, r) => s + Number(r.expenses), 0)
   const totalNet       = dailyRecords.reduce((s, r) => s + recordNet(r), 0)
-  const workDays       = dailyRecords.length
+  // Datas distintas: no /gestor há uma boleta por entregador por dia.
+  const workDays       = new Set(dailyRecords.map(r => r.date)).size
   const avgNet         = workDays ? totalNet / workDays : 0
 
   const receita = transactions.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)

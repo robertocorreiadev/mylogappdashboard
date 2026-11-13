@@ -31,6 +31,8 @@ export function ConfirmDialog({
 }: ConfirmProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Fechado = sem erro: ao abrir de novo, o erro da tentativa anterior não aparece.
+  if (!open && error) setError(null)
 
   function handleConfirm() {
     setError(null)

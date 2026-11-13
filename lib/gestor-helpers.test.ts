@@ -39,8 +39,11 @@ describe("formatAuditValue", () => {
 })
 
 describe("formatDateTime", () => {
-  it("data e hora em pt-BR", () => {
-    expect(formatDateTime(new Date(2026, 10, 13, 9, 5))).toBe("13/11/2026 09:05")
+  it("data e hora no fuso de São Paulo, qualquer que seja o fuso da máquina", () => {
+    expect(formatDateTime(new Date("2026-11-13T12:05:00Z"))).toBe("13/11/2026 09:05")
+  })
+  it("perto da meia-noite UTC a data é a de São Paulo", () => {
+    expect(formatDateTime("2026-11-13T01:30:00Z")).toBe("12/11/2026 22:30")
   })
 })
 

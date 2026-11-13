@@ -60,9 +60,17 @@ export function formatAuditValue(field: string, value: unknown): string {
   return String(value)
 }
 
-/** "13/11/2026 09:05" (hora local). */
+const DATE_TIME = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+})
+
+/**
+ * "13/11/2026 09:05" no fuso de São Paulo. Fuso fixo, não o da máquina: o
+ * componente renderiza no servidor (UTC na Vercel) e no navegador, e os dois
+ * textos precisam ser iguais (senão o React acusa erro de hidratação).
+ */
 export function formatDateTime(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d
-  const p = (n: number) => String(n).padStart(2, "0")
-  return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(date.getHours())}:${p(date.getMinutes())}`
+  return DATE_TIME.format(date).replace(",", "")
 }

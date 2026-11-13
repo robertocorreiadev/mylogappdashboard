@@ -475,8 +475,8 @@ Os parâmetros opcionais `knownUser` (em `auth.ts`) e `known?: MembershipContext
 |---|---|---|---|
 | `/` | `app/page.tsx` | público | Logado → `/select`. Senão mostra a tela de login (§11.1). |
 | `/select` | `app/select/page.tsx` | logado | `requireUser` falha → `/`. Só gestor (sem papel entregador e sem ser admin) → `/gestor`. Senão mostra a tela de início com os cartões dos papéis do usuário, ou o estado vazio (§11.2). |
-| `/dashboard` | `app/dashboard/page.tsx` | entregador | `requireUser` falha → `/`. Busca entregas, transações e boletas do painel `jadlog` em `Promise.all`. Se falhar (sem papel entregador) → `/select`. Renderiza `DashboardHeader(panelName "JADLOG", isAdmin)` + `DashboardTabs`. |
-| `/panel2` | `app/panel2/page.tsx` | entregador | Igual a `/dashboard`, com `PANEL = "panel2"`, `panelName "Painel 2"` e `AppShell panel="panel2"` (`<main data-panel="panel2">`), que ativa o tema azul. |
+| `/dashboard` | `app/dashboard/page.tsx` | entregador | `requireUser` falha → `/`. Busca entregas, transações e boletas do painel `jadlog` em `Promise.all`. Se falhar (sem papel entregador) → `/select`. Renderiza `AppShell` + `DashboardHeader(title "JADLOG")` + `DashboardTabs`. |
+| `/panel2` | `app/panel2/page.tsx` | entregador | Igual a `/dashboard`, com `PANEL = "panel2"`, título `"Painel 2"`, `PanelTheme` e `AppShell panel="panel2"` (`<main data-panel="panel2">`), que ativa o tema azul. |
 | `/gestor` | `app/gestor/page.tsx` | gestor | Sem papel gestor → `/select`. Resolve `requireGestor()` **uma vez** e repassa às 3 consultas (§11.8). |
 | `/gestor/entregadores/[userId]` | `app/gestor/entregadores/[userId]/page.tsx` | gestor ou admin | 1. `resolveViewerMode()`. Se lançar (deslogado, ou logado sem ser admin nem gestor) → `redirect("/")`, e a `/` manda o logado para `/select`.<br>2. `params` e `searchParams` são `Promise`. Id inválido → 404. `?from=gestor|gestao` define o "Voltar" (`drillDownBackHref`, `lib/nav.ts`): o gestor volta sempre ao `/gestor`; o admin volta ao `/gestor` com `from=gestor` e ao `/gestao` nos outros casos.<br>3. Admin → `adminGetTargetMemberData` + ações admin com `.bind(null, organizationId, targetUserId)`.<br>4. Gestor → `getMemberDashboardData(targetUserId, viewer)`, só leitura.<br>5. Alvo inexistente ou de fora → 404. |
 | `/gestor/auditoria` | `app/gestor/auditoria/page.tsx` | gestor ou admin | Admin → `getAuditLogGlobal()` (todas as organizações, sem precisar do papel gestor). Gestor → `getAuditLog(ctx)` (só a própria). Nenhum dos dois → `/select`. `canDelete = isAdminEmail`. |
@@ -812,9 +812,9 @@ Props: `records` (do período), `allRecords` (todas), `filtered`, `showAnnual` (
 
 | Rótulo | Valor | Dica | Ícone / cor |
 |---|---|---|---|
-| `"Entregas realizadas"` | Σ entregas | `"{n} dias trabalhados"` | `Truck` / primary |
+| `"Entregas realizadas"` | Σ entregas | `"{n} dias trabalhados"` (datas distintas: no `/gestor` há uma boleta por entregador por dia) | `Truck` / primary |
 | `"Fat. bruto acumulado"` | bruto | `"Despesas: R$ x"` | `TrendingUp` / chart-2 |
-| `"Fat. líquido acumulado"` | líquido | `"Média/dia: R$ x"` | `Wallet` / verde ou vermelho |
+| `"Fat. líquido acumulado"` | líquido | `"Média/dia: R$ x"` (líquido ÷ datas distintas) | `Wallet` / verde ou vermelho |
 | `"Pacotes no rastreio"` | nº de pacotes | `"{n} em aberto"` | `Package` / chart-4 |
 | `"Saldo financeiro"` | saldo | `"Receitas R$ x · Despesas R$ y"` | `TrendingUp` ou `TrendingDown` / verde ou vermelho |
 
@@ -897,8 +897,8 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
 
 **Auditoria** `/gestor/auditoria` (`AuditLogList` e `AuditLogRow`, `components/audit-log-row.tsx`):
 - Título `"Histórico de edições ({n})"`; para o admin, `"Histórico de edições ({n}) · todas as organizações"`.
-- Filtros: `<select aria-label="Quem fez">` (`"Todas as pessoas"` + autores) e `<select aria-label="Tipo de registro">` (`"Todos os tipos"`, `"Boletas"`, `"Pacotes"`, `"Lançamentos"`, `"Usuários"`, `"Entradas de auditoria"`, só os que existem). Mostra 50 por vez; `"Mostrar mais ({n} restantes)"`. Sem resultado → `"Nenhuma edição com esse filtro."`; sem nenhuma → `"Nenhuma edição registrada ainda."`.
-- Cada item: `"{ator} {criou|editou|excluiu} {item}"`, com o item pelo nome (`auditItemLabel`, `lib/audit-format.ts`, a partir de `snapshotAfter` ou `snapshotBefore`): `"boleta de {DD/MM/AAAA}"`, `"pacote {código}"`, `"lançamento \"{descrição}\""`, `"usuário {nome}"`, `"entrada de auditoria #{id}"`; sem foto → `"{tipo} #{id}"`. Embaixo: data e hora `"DD/MM/AAAA HH:MM"` (`formatDateTime`) e, para o admin, o selo da organização.
+- Filtros: `<select aria-label="Quem fez">` (`"Todas as pessoas"` + autores, pela chave `actorUserId`; nomes repetidos ganham `" (#id)"`) e `<select aria-label="Tipo de registro">` (`"Todos os tipos"`, `"Boletas"`, `"Pacotes"`, `"Lançamentos"`, `"Usuários"`, `"Entradas de auditoria"`, só os que existem). Mostra 50 por vez; `"Mostrar mais ({n} restantes)"`. Sem resultado → `"Nenhuma edição com esse filtro."` (sem filtro ativo, por exemplo depois de excluir tudo: `"Nenhuma edição registrada ainda."`); sem nenhuma → `"Nenhuma edição registrada ainda."`.
+- Cada item: `"{ator} {criou|editou|excluiu} {item}"`, com o item pelo nome (`auditItemLabel`, `lib/audit-format.ts`, a partir de `snapshotAfter` ou `snapshotBefore`): `"boleta de {DD/MM/AAAA}"`, `"pacote {código}"`, `"lançamento \"{descrição}\""`, `"usuário {nome}"`, `"entrada de auditoria #{id}"`; sem foto → `"{tipo} #{id}"`. Embaixo: data e hora `"DD/MM/AAAA HH:MM"` (`formatDateTime`, sempre no fuso `America/Sao_Paulo`: o texto do servidor e o do navegador são iguais, sem erro de hidratação) e, para o admin, o selo da organização.
 - Mudanças: `"{campo}: ~~antigo~~ → novo"`, com valores formatados (`formatAuditValue`): dinheiro em R$ (`valuePerDelivery`, `expenses`, `value`, `amount`), datas em DD/MM/AAAA (`date`, `deadline`), status e tipo com rótulo, vazio → `"—"`. Nomes dos campos:
 
   | Campo | Nome na tela |
@@ -921,9 +921,9 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
   | `trackingCode` | código de rastreio |
 
 - Admin: lixeira (title `"Excluir entrada de auditoria (ADMIN MASTER) — fica registrado quem excluiu"`) → confirmação `"Excluir esta entrada de auditoria?"` / `"A exclusão também fica registrada, com você como autor. Essa ação não pode ser desfeita."`. O item some quando o servidor confirma.
-- `getAuditLog` e `getAuditLogGlobal` trazem também `snapshotBefore` e `snapshotAfter`.
+- `getAuditLog` e `getAuditLogGlobal` leem `snapshotBefore`/`snapshotAfter` e `actorUserId`, mas **montam o `itemLabel` no servidor e não devolvem as fotos**: endereços, valores e entradas aninhadas não vão para a página.
 
-**`ConfirmDialog`** (controlado, aberto por quem chama, ex.: um menu) e **`ConfirmButton`** (botão que abre o `ConfirmDialog`) (`components/confirm-dialog.tsx`): modal de confirmação genérico (título, descrição, `confirmLabel`/`pendingLabel`, padrão `"Excluir"`/`"Excluindo..."`; foco inicial em `"Cancelar"`). Se a action devolver `{ error }`, o erro aparece no modal e ele não fecha; se lançar, `"Não foi possível concluir. Atualize a página e tente de novo."`. O `ConfirmDeleteButton` usa ele.
+**`ConfirmDialog`** (controlado, aberto por quem chama, ex.: um menu) e **`ConfirmButton`** (botão que abre o `ConfirmDialog`) (`components/confirm-dialog.tsx`): modal de confirmação genérico (título, descrição, `confirmLabel`/`pendingLabel`, padrão `"Excluir"`/`"Excluindo..."`; foco inicial em `"Cancelar"`). Se a action devolver `{ error }`, o erro aparece no modal e ele não fecha (o erro some quando o modal fecha, por qualquer caminho); se lançar, `"Não foi possível concluir. Atualize a página e tente de novo."`. O `ConfirmDeleteButton` usa ele.
 
 ### 11.10 Convite — `/convite/[token]`
 
@@ -1046,13 +1046,13 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **141/141**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **142/142**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
 | `lib/auth-redirect.test.ts` | `safeLogoutRedirect`: vazio → `/`; aceita `/convite/{token}`; recusa URL externa, `//host`, `..`, query, outra rota e `/convite/` vazio |
-| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime`; `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado) |
+| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime` (fuso de São Paulo, inclusive perto da meia-noite UTC); `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado) |
 | `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos) |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
@@ -1095,10 +1095,12 @@ Para chamar uma entrega de "pronta", todos estes passos DEVEM passar:
 2. `npm test` com todos os testes passando.
 3. Teste manual no navegador:
    - cadastro e login (senha e Google);
-   - boleta: criar; salvar a mesma data de novo (deve substituir); conferir bruto e líquido ao vivo; conferir resumos mensal e anual e a faixa de quinzenas; exportar CSV;
+   - boleta: criar (toast, form limpo, valor por entrega da última boleta); salvar a mesma data de novo (pede confirmação e substitui); editar (data travada); vírgula nos campos de R$; conferir bruto e líquido ao vivo; resumos mensal e anual e a faixa de quinzenas; exportar CSV;
+   - filtro de período: muda cartões, Boletas, Financeiro e Visão geral;
+   - navegação: barra superior (desktop) e inferior (celular, 375 px sem rolagem lateral), item ativo, menu de conta, tema claro/escuro (persiste ao recarregar);
    - os dois painéis com dados separados e cores diferentes;
    - convite: gerar, aceitar, revogar;
-   - drill-down do gestor só leitura; outra organização → 404;
+   - `/gestor`: seletor de painel (cartões de um painel por vez), entregadores por painel; drill-down do gestor só leitura com seletor de painel e "Voltar" certo; outra organização → 404;
    - admin: editar um dado de outra organização e ver a auditoria registrar o admin como autor.
 
 ---
