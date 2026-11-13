@@ -96,9 +96,10 @@ ou decisão dele):**
    sessão; o Claude não pode entrar de novo com a senha).
 2. Criar um banco de teste (branch do Neon) e rodar
    `scripts/seed-worst-case.ts` (a connection string tem senha).
-3. Task-observer: instalar a correção em staging do hook
-   `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`, observation
-   0026).
+
+(Hook de triagem de investimento: lote da revisão de 2026-11-09 instalado em
+2026-11-13 — 8/8 por hash, testes 46/46; o falso positivo em notificações do
+harness não dispara mais.)
 
 (O antigo "começar por aqui" de 2026-11-09 — login com Google em produção e
 conferir salvamentos — entrou na lista "o que ficou para o usuário" acima.)
