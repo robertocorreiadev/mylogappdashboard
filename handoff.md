@@ -74,11 +74,25 @@ e 5: 6 correções, 1 "não é defeito", 3 débitos (seção no `TODO.md`). Spec
 Revisado e aprovado pelo usuário; push em 2026-11-13. Vercel: produção =
 `7e32398` (Ready). **Redesign concluído (Fases 0–6).**
 
-**⏭️ Próxima sessão — começar por aqui:** conferir em produção o que não
-dava para testar sem gravar no banco: salvar uma boleta (toast, form limpo),
-criar/compartilhar/revogar convite, editar pacote, "Trocar conta" no
-convite. Depois: débitos do `TODO.md` (seção "revisão de código das Fases 4
-e 5") e a base de teste de pior caso.
+**Pendências resolvidas sozinho em 2026-11-13 (usuário ausente, "resolver
+pendências autonomamente"):** os 3 débitos da revisão (cor do painel,
+busca normalizada e textos da auditoria numa fonte só; última boleta sem
+recalcular tudo) e a base de teste de pior caso (fixture + 14 testes +
+script de seed com trava contra o banco de produção, não executado).
+160/160, build ok, smoke test das telas sem gravar.
+
+**⏭️ Próxima sessão — o que ficou para o usuário (exige gravar no banco de
+produção, credencial ou decisão dele):**
+1. Conferir em produção: salvar uma boleta (toast, form limpo), criar /
+   compartilhar / revogar convite, editar pacote, "Trocar conta" no convite.
+2. Testar o login com Google em produção (D1, de 2026-11-09).
+3. Aviso `sslmode` do driver `pg`: trocar para `sslmode=verify-full` no
+   `.env` e na Vercel (variável de ambiente) e testar.
+4. Criar um banco de teste (branch do Neon) e rodar
+   `scripts/seed-worst-case.ts` para smoke tests com dados de pior caso.
+5. Task-observer: instalar a correção em staging do hook
+   `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`), que ainda
+   dispara a triagem de investimento por engano (observation 0026).
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

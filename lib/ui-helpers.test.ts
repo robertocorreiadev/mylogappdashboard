@@ -3,7 +3,7 @@ import { sanitizeDecimalInput, decimalValue } from "./money"
 import { periodOptions, periodLabel } from "./period"
 import { lastValuePerDelivery, filterByDelivered } from "./boleta"
 import { filterPackages } from "./package-filter"
-import { formatCurrencyCompact } from "./format"
+import { formatCurrencyCompact, panelColor, normalizeSearch } from "./format"
 
 describe("sanitizeDecimalInput (campo de R$ no celular)", () => {
   it("vírgula vira ponto", () => {
@@ -108,5 +108,16 @@ describe("formatCurrencyCompact (eixo dos gráficos)", () => {
   })
   it("valores pequenos não viram 0k repetido", () => {
     expect(formatCurrencyCompact(200)).not.toBe(formatCurrencyCompact(400))
+  })
+})
+
+describe("panelColor e normalizeSearch (fonte única)", () => {
+  it("cor do painel; painel desconhecido usa a cor de marca", () => {
+    expect(panelColor("jadlog")).toBe("var(--panel-jadlog)")
+    expect(panelColor("panel2")).toBe("var(--panel-2)")
+    expect(panelColor("outro")).toBe("var(--primary)")
+  })
+  it("busca sem maiúsculas nem acentos", () => {
+    expect(normalizeSearch("João Ávila")).toBe("joao avila")
   })
 })

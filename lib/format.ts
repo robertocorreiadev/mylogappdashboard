@@ -61,3 +61,16 @@ export const PANEL_LABELS: Record<string, string> = { jadlog: "JADLOG", panel2: 
 export function panelLabel(panel: string) {
   return PANEL_LABELS[panel] ?? panel
 }
+
+// Cor de identidade de cada painel (tokens de globals.css). Fonte única para
+// navegação, seletor de painel e cartões; painel sem cor usa a cor de marca.
+export const PANEL_COLORS: Record<string, string> = { jadlog: "var(--panel-jadlog)", panel2: "var(--panel-2)" }
+
+export function panelColor(panel: string) {
+  return PANEL_COLORS[panel] ?? "var(--primary)"
+}
+
+/** Texto para busca: sem maiúsculas nem acentos. */
+export function normalizeSearch(s: string) {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+}

@@ -23,6 +23,16 @@ export function memberStats(records: Rec[]): Map<number, MemberStats> {
   return out
 }
 
+/** Data da boleta mais recente de cada entregador (todas as boletas). */
+export function lastBoletaByUser(records: { userId: number; date: string }[]): Map<number, string> {
+  const out = new Map<number, string>()
+  for (const r of records) {
+    const cur = out.get(r.userId)
+    if (!cur || r.date > cur) out.set(r.userId, r.date)
+  }
+  return out
+}
+
 /** Um resumo por painel (os padrões sempre aparecem, mesmo sem dado). */
 export function panelSummaries(records: Rec[]): ({ panel: string } & PanelNumbers)[] {
   const keys = Array.from(new Set([...Object.keys(PANEL_LABELS), ...records.map((r) => r.panel)]))

@@ -2,7 +2,8 @@ import { Truck, TrendingUp, TrendingDown, Wallet, Package } from "lucide-react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency, MONTHS } from "@/lib/format"
-import { netByQuinzena, recordGross, recordNet, type QuinzenaSplit } from "@/lib/metrics"
+import { netByQuinzena, type QuinzenaSplit } from "@/lib/metrics"
+import { computeKpis } from "@/lib/kpis"
 
 function netColor(value: number, days: number) {
   if (!days) return "text-muted-foreground"
@@ -54,17 +55,9 @@ export function StatsOverview({
   dailyRecords: DailyRecord[]
   periodLabel?: string
 }) {
-  const totalDelivered = dailyRecords.reduce((s, r) => s + r.delivered, 0)
-  const totalGross     = dailyRecords.reduce((s, r) => s + recordGross(r), 0)
-  const totalExpDR     = dailyRecords.reduce((s, r) => s + Number(r.expenses), 0)
-  const totalNet       = dailyRecords.reduce((s, r) => s + recordNet(r), 0)
-  // Datas distintas: no /gestor há uma boleta por entregador por dia.
-  const workDays       = new Set(dailyRecords.map(r => r.date)).size
-  const avgNet         = workDays ? totalNet / workDays : 0
-
-  const receita = transactions.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
-  const despesa = transactions.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
-  const saldo   = receita - despesa
+  // Contas em lib/kpis.ts (testadas com a base de pior caso).
+  const { totalDelivered, totalGross, totalExpenses: totalExpDR, totalNet, workDays, avgNet, receita, despesa, saldo } =
+    computeKpis(dailyRecords, transactions)
 
   const quinzenas = netByQuinzena(dailyRecords)
 

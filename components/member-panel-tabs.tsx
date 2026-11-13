@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { DashboardTabs, type PanelActions } from "@/components/dashboard-tabs"
 import { PanelTheme } from "@/components/panel-theme"
+import { panelColor } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 type PanelData = {
@@ -13,8 +14,6 @@ type PanelData = {
   deliveries: Delivery[]
   transactions: Transaction[]
 }
-
-const PANEL_COLOR: Record<string, string> = { jadlog: "var(--panel-jadlog)", panel2: "var(--panel-2)" }
 
 // Um painel = um contrato/transportadora distinto do entregador — nunca
 // mescla os números de painéis diferentes num total só.
@@ -33,7 +32,7 @@ export function MemberPanelTabs({ panels, actions }: { panels: PanelData[]; acti
         <span className="text-sm text-muted-foreground">Painel</span>
         {panels.map((p) => {
           const on = p.panel === current.panel
-          const color = PANEL_COLOR[p.panel] ?? "var(--primary)"
+          const color = panelColor(p.panel)
           return (
             <button
               key={p.panel}

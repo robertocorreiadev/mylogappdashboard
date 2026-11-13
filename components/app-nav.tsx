@@ -15,6 +15,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { isNavActive, type NavIcon, type NavItem } from "@/lib/nav"
+import { panelColor } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 const ICONS: Record<NavIcon, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
@@ -25,12 +26,10 @@ const ICONS: Record<NavIcon, React.ComponentType<{ className?: string; style?: R
   gestao: ShieldCheck,
 }
 
-// Cor de identidade de cada item ativo (tokens de globals.css). Os outros
-// itens usam a cor de marca.
-const ACTIVE_COLOR: Partial<Record<NavIcon, string>> = {
-  jadlog: "var(--panel-jadlog)",
-  panel2: "var(--panel-2)",
-  gestor: "var(--role-gestor)",
+// Cor de identidade do item ativo: o painel (lib/format.ts) ou o papel
+// gestor; os outros itens usam a cor de marca.
+function activeColor(icon: NavIcon) {
+  return icon === "gestor" ? "var(--role-gestor)" : panelColor(icon)
 }
 
 function initials(name: string) {
@@ -123,7 +122,7 @@ export function AppNav({ items, userName, userEmail }: { items: NavItem[]; userN
                         active && "bg-muted text-foreground"
                       )}
                     >
-                      <Icon className="h-4 w-4" style={active ? { color: ACTIVE_COLOR[item.icon] ?? "var(--primary)" } : undefined} />
+                      <Icon className="h-4 w-4" style={active ? { color: activeColor(item.icon) } : undefined} />
                       {item.label}
                     </Link>
                   </li>
@@ -157,7 +156,7 @@ export function AppNav({ items, userName, userEmail }: { items: NavItem[]; userN
                       active && "text-foreground"
                     )}
                   >
-                    <Icon className="h-5 w-5" style={active ? { color: ACTIVE_COLOR[item.icon] ?? "var(--primary)" } : undefined} />
+                    <Icon className="h-5 w-5" style={active ? { color: activeColor(item.icon) } : undefined} />
                     {item.shortLabel}
                   </Link>
                 </li>

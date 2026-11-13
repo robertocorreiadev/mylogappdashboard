@@ -568,23 +568,27 @@ Não é defeito:
   modal fica aberto e bloqueado enquanto ela roda; um segundo clique depois
   abre outra confirmação.
 Débito (eficiência/repetição, para uma tarefa própria):
-- [ ] `gestor-overview.tsx` roda `memberStats` duas vezes (uma só para a
-      última boleta); trocar por um `max` por usuário.
-- [ ] Mapa painel → cor repetido em `gestor-overview.tsx`,
-      `member-panel-tabs.tsx` e `app-nav.tsx`; `norm()` repetido em
-      `gestor-overview.tsx` e `lib/package-filter.ts`. Exportar um só (ex.:
-      `PANEL_COLORS` em `lib/format.ts` e `normalizeSearch` em `lib/`).
-- [ ] `ENTITY_FILTER` e `fieldLabel` em `audit-log-row.tsx` repetem
-      `ENTITY_NOUN` de `lib/audit-format.ts`; mover tudo para lá.
+- [x] `gestor-overview.tsx` usa `lastBoletaByUser` (um `max` por usuário)
+      para a última boleta (2026-11-13).
+- [x] Cor do painel numa fonte só (`PANEL_COLORS`/`panelColor` em
+      `lib/format.ts`) e busca normalizada numa só (`normalizeSearch`),
+      usadas por `app-nav`, `gestor-overview`, `member-panel-tabs` e
+      `package-filter` (2026-11-13).
+- [x] Textos da auditoria em `lib/audit-format.ts` (`auditEntityPlural`,
+      `auditFieldLabel`) (2026-11-13).
 
-## Base de teste de pior caso (decisão do usuário, 2026-11-09)
-- [ ] Criar um usuário/organização de teste "estressado" no banco de dev
-      para todo smoke test cair nos piores casos sem esforço: valores
-      grandes (R$ 100.000+ no mês), vários entregadores e os dois painéis
-      na mesma data, mês com líquido negativo, mês com só a 1ª ou só a 2ª
-      quinzena, só o dia 16, virada de ano. Origem: observation 0029 do
-      task-observer (a revisão achou defeitos que o smoke test com dados
-      comuns não pegou). Script de seed no repo, nunca com credencial real.
+## Base de teste de pior caso (decisão do usuário, 2026-11-09; feita 2026-11-13)
+- [x] `lib/fixtures/worst-case.ts` + `lib/worst-case.test.ts` (14 testes):
+      valores grandes (R$ 354 mil por painel no mês), 3 entregadores e os 2
+      painéis na mesma data, mês negativo, só a 1ª quinzena, só o dia 16,
+      virada de ano. Mutação conferida: voltar "dias trabalhados" para
+      contar boletas faz o teste falhar. Contas dos cartões extraídas para
+      `computeKpis` (`lib/kpis.ts`) para poderem ser testadas.
+- [x] `scripts/seed-worst-case.ts`: grava a base num banco de TESTE; trava
+      `seedTargetAllowed` recusa o host+banco do `DATABASE_URL` (+ testes);
+      exige `--yes`. **Nunca rodou** (não existe banco de teste ainda).
+- [ ] Criar um banco Neon de teste (branch do Neon serve), aplicar o DDL da
+      spec §4.2 e rodar o seed; depois fazer o smoke test logado nele.
 
 ## Pendências conhecidas
 - **Sem migração automatizada de schema**: mudanças de banco são feitas via

@@ -47,6 +47,32 @@ export function auditItemLabel(ref: AuditRef): string {
   }
 }
 
+// Plural de cada tipo, para o filtro da auditoria.
+const ENTITY_PLURAL: Record<string, string> = {
+  daily_record: "Boletas",
+  delivery: "Pacotes",
+  transaction: "Lançamentos",
+  user: "Usuários",
+  audit_log_entry: "Entradas de auditoria",
+}
+
+export function auditEntityPlural(entityType: string): string {
+  return ENTITY_PLURAL[entityType] ?? entityType
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  delivered: "entregas realizadas", scheduled: "agendadas", occurrences: "ocorrências",
+  valuePerDelivery: "valor por entrega", expenses: "despesas", status: "status",
+  value: "valor", amount: "valor", type: "tipo", description: "descrição", category: "categoria",
+  date: "data", deadline: "prazo", recipient: "destinatário", address: "endereço", city: "cidade",
+  trackingCode: "código de rastreio",
+}
+
+/** Nome do campo na lista de mudanças ("valor por entrega"). */
+export function auditFieldLabel(field: string): string {
+  return FIELD_LABELS[field] ?? field
+}
+
 const MONEY_FIELDS = new Set(["valuePerDelivery", "expenses", "value", "amount"])
 const DATE_FIELDS = new Set(["date", "deadline"])
 

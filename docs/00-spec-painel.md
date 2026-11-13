@@ -808,6 +808,7 @@ Props: `records` (do período), `allRecords` (todas), `filtered`, `showAnnual` (
 
 - `periodLabel` (opcional) → `"Período: {label}"`. O `DashboardTabs` não passa (o filtro está logo acima).
 - **Abaixo do `lg`: faixa com rolagem lateral** (`snap-x`), cartões de 68% da largura no celular (42% no `sm`, 31% no `md`), alinhados no topo (cada um com a própria altura). A faixa rola sozinha: a página não ganha rolagem lateral. **`lg`+: grade de 5.**
+- As contas ficam em `computeKpis` (`lib/kpis.ts`, função pura testada com a base de pior caso).
 - Cada cartão: rótulo `text-xs uppercase`; **valor** `font-display text-2xl tabular-nums` (corta com `…` e mostra inteiro no `title` se não couber); dica `text-xs`; ícone `h-5 w-5` (o bloco de texto é `min-w-0`, então o ícone não sai do cartão).
 
 | Rótulo | Valor | Dica | Ícone / cor |
@@ -1046,14 +1047,15 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **142/142**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **160/160**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
+| `lib/worst-case.test.ts` | **base de pior caso** (`lib/fixtures/worst-case.ts`: 3 entregadores × 2 painéis na mesma data, R$ 354 mil por painel no mês, mês negativo, só 1ª quinzena, só o dia 16, virada de ano): `computeKpis` (dias = datas distintas, média, R$ grandes, saldo com centavos), `panelSummaries` e `memberStats` (nunca somam painéis), `netByQuinzena` (soma = mês, bordas, virada de ano), `lastBoletaByUser`, `formatCurrencyCompact`; `seedTargetAllowed` (recusa vazio, URL inválida e o mesmo host+banco do `DATABASE_URL`) |
 | `lib/auth-redirect.test.ts` | `safeLogoutRedirect`: vazio → `/`; aceita `/convite/{token}`; recusa URL externa, `//host`, `..`, query, outra rota e `/convite/` vazio |
-| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime` (fuso de São Paulo, inclusive perto da meia-noite UTC); `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado) |
-| `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos) |
+| `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime` (fuso de São Paulo, inclusive perto da meia-noite UTC); `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado); `lastBoletaByUser`; `auditFieldLabel` e `auditEntityPlural` |
+| `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos); `panelColor` (cor do painel, desconhecido → `--primary`) e `normalizeSearch` |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
 | `lib/google-link.test.ts` | `isEmailAuthoritative`: @gmail.com verificado; Workspace com `hd` igual ao domínio; recusa conta comum de outro domínio, `hd` diferente, não verificado e `verified_email` que não é `true`. `decideGoogleLink`: usa a conta do `google_id`; liga pelo e-mail autoritativo; recusa e-mail não autoritativo (ligar e criar); recusa conta já ligada a outro `google_id`; cria conta nova |
@@ -1085,6 +1087,11 @@ As server actions e os componentes não têm teste automatizado. Eles dependem d
 9. Primeiro acesso:
    - o admin se cadastra pela tela normal e ganha uma organização solo como entregador;
    - para virar gestor, ele cria uma organização em `/gestao` e escolhe a própria conta.
+
+### 14.1a Base de teste de pior caso
+
+- `lib/fixtures/worst-case.ts`: organização 900, entregadores 901–903 (`*.piorcaso@exemplo.test`), boletas e lançamentos fictícios dos piores casos (ver o cabeçalho do arquivo). Usada por `lib/worst-case.test.ts`.
+- `scripts/seed-worst-case.ts`: grava a mesma base num **banco de teste** (`SEED_DATABASE_URL`, com o schema da §4.2). Só roda com `--yes` e se `seedTargetAllowed` aprovar: host e nome do banco diferentes do `DATABASE_URL` (produção). Apaga e recria só a organização 900. As contas têm senha inutilizável (`"!"`): entrar só pelo modo ADMIN MASTER. Os ids são fixos (900–903): use num banco só de teste.
 
 ### 14.2 Critérios de aceite
 

@@ -8,18 +8,13 @@ import { PeriodFilter } from "@/components/period-filter"
 import { StatsOverview } from "@/components/stats-overview"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { filterByPeriod, formatCurrency, formatDate, panelLabel } from "@/lib/format"
-import { memberStats, panelSummaries } from "@/lib/gestor-stats"
+import { filterByPeriod, formatCurrency, formatDate, normalizeSearch, panelColor, panelLabel } from "@/lib/format"
+import { lastBoletaByUser, memberStats, panelSummaries } from "@/lib/gestor-stats"
 import { cn } from "@/lib/utils"
 
 type Member = { userId: number; name: string; email: string }
 
-const PANEL_COLOR: Record<string, string> = { jadlog: "var(--panel-jadlog)", panel2: "var(--panel-2)" }
 const netColor = (n: number) => (n >= 0 ? "text-[var(--chart-2)]" : "text-destructive")
-
-function norm(s: string) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-}
 
 /**
  * /gestor: período → painel → cartões do painel escolhido → entregadores.
@@ -38,11 +33,11 @@ export function GestorOverview({
   const txs = useMemo(() => filterByPeriod(transactions, year, month), [transactions, year, month])
   const summaries = useMemo(() => panelSummaries(records), [records])
   const stats = useMemo(() => memberStats(records), [records])
-  const lastDates = useMemo(() => memberStats(dailyRecords), [dailyRecords])
+  const lastDates = useMemo(() => lastBoletaByUser(dailyRecords), [dailyRecords])
 
   const visibleMembers = useMemo(() => {
-    const q = norm(query.trim())
-    return q ? members.filter((m) => norm(m.name).includes(q) || norm(m.email).includes(q)) : members
+    const q = normalizeSearch(query.trim())
+    return q ? members.filter((m) => normalizeSearch(m.name).includes(q) || normalizeSearch(m.email).includes(q)) : members
   }, [members, query])
 
   return (
@@ -55,7 +50,7 @@ export function GestorOverview({
       <div className="mb-3 grid gap-2 sm:grid-cols-2" role="group" aria-label="Painel">
         {summaries.map((s) => {
           const active = s.panel === panel
-          const color = PANEL_COLOR[s.panel] ?? "var(--primary)"
+          const color = panelColor(s.panel)
           return (
             <button
               key={s.panel}
@@ -110,7 +105,7 @@ export function GestorOverview({
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {visibleMembers.map((m) => {
                 const st = stats.get(m.userId)
-                const last = lastDates.get(m.userId)?.lastDate ?? null
+                const last = lastDates.get(m.userId) ?? null
                 return (
                   <li key={m.userId}>
                     <Link
@@ -124,7 +119,7 @@ export function GestorOverview({
                           const n = st?.byPanel[s.panel] ?? { delivered: 0, net: 0 }
                           return (
                             <div key={s.panel} className="flex items-center justify-between gap-2">
-                              <dt className="text-xs" style={{ color: PANEL_COLOR[s.panel] }}>{panelLabel(s.panel)}</dt>
+                              <dt className="text-xs" style={{ color: panelColor(s.panel) }}>{panelLabel(s.panel)}</dt>
                               <dd className="flex items-baseline gap-2">
                                 <span className="text-xs text-muted-foreground">{n.delivered} entregas</span>
                                 <span className={`font-mono text-sm font-semibold tabular-nums ${netColor(n.net)}`}>{formatCurrency(n.net)}</span>

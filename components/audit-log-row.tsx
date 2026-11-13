@@ -6,28 +6,9 @@ import { Trash2 } from "lucide-react"
 import { adminDeleteAuditLogEntry } from "@/app/actions/admin-override"
 import { ConfirmButton } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
-import { formatAuditValue, formatDateTime } from "@/lib/audit-format"
+import { auditEntityPlural, auditFieldLabel, formatAuditValue, formatDateTime } from "@/lib/audit-format"
 
 const ACTION_LABELS: Record<string, string> = { create: "criou", update: "editou", delete: "excluiu" }
-const ENTITY_FILTER: Record<string, string> = {
-  daily_record: "Boletas",
-  delivery: "Pacotes",
-  transaction: "Lançamentos",
-  user: "Usuários",
-  audit_log_entry: "Entradas de auditoria",
-}
-
-function fieldLabel(field: string) {
-  const labels: Record<string, string> = {
-    delivered: "entregas realizadas", scheduled: "agendadas", occurrences: "ocorrências",
-    valuePerDelivery: "valor por entrega", expenses: "despesas", status: "status",
-    value: "valor", amount: "valor", type: "tipo", description: "descrição", category: "categoria",
-    date: "data", deadline: "prazo", recipient: "destinatário", address: "endereço", city: "cidade",
-    trackingCode: "código de rastreio",
-  }
-  return labels[field] ?? field
-}
-
 export type LogEntry = {
   id: number
   entityType: string
@@ -61,7 +42,7 @@ export function AuditLogRow({ log, canDelete = false, onRemoved }: { log: LogEnt
           <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
             {changes.map((c, i) => (
               <li key={i}>
-                {fieldLabel(c.field)}: <span className="line-through">{formatAuditValue(c.field, c.old)}</span>
+                {auditFieldLabel(c.field)}: <span className="line-through">{formatAuditValue(c.field, c.old)}</span>
                 {" → "}
                 <span className="font-medium text-foreground">{formatAuditValue(c.field, c.new)}</span>
               </li>
@@ -129,7 +110,7 @@ export function AuditLogList({ logs, canDelete = false }: { logs: LogEntry[]; ca
         </select>
         <select aria-label="Tipo de registro" className={selectClass} value={entity} onChange={(e) => { setEntity(e.target.value); setLimit(PAGE) }}>
           <option value="all">Todos os tipos</option>
-          {entities.map((e) => <option key={e} value={e}>{ENTITY_FILTER[e] ?? e}</option>)}
+          {entities.map((e) => <option key={e} value={e}>{auditEntityPlural(e)}</option>)}
         </select>
       </div>
       {visible.length === 0 ? (

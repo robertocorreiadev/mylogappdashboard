@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { auditItemLabel, formatAuditValue, formatDateTime } from "./audit-format"
-import { memberStats, panelSummaries } from "./gestor-stats"
+import { auditItemLabel, formatAuditValue, formatDateTime, auditFieldLabel, auditEntityPlural } from "./audit-format"
+import { memberStats, panelSummaries, lastBoletaByUser } from "./gestor-stats"
 
 const NBSP = " "
 
@@ -75,5 +75,23 @@ describe("panelSummaries (seletor de painel do /gestor)", () => {
     expect(s.map((p) => p.panel)).toEqual(["jadlog", "panel2"])
     expect(s[0]).toMatchObject({ delivered: 55, net: 100 })
     expect(s[1]).toMatchObject({ delivered: 0, net: 0 })
+  })
+})
+
+describe("lastBoletaByUser (só a última boleta, sem somar nada)", () => {
+  it("data mais recente por entregador", () => {
+    const m = lastBoletaByUser(recs)
+    expect(m.get(1)).toBe("2026-11-12")
+    expect(m.get(2)).toBe("2026-10-01")
+    expect(m.get(3)).toBeUndefined()
+  })
+})
+
+describe("textos da auditoria em lib/audit-format", () => {
+  it("rótulo do campo e do tipo; desconhecido volta cru", () => {
+    expect(auditFieldLabel("valuePerDelivery")).toBe("valor por entrega")
+    expect(auditFieldLabel("xyz")).toBe("xyz")
+    expect(auditEntityPlural("delivery")).toBe("Pacotes")
+    expect(auditEntityPlural("invite")).toBe("invite")
   })
 })

@@ -1,10 +1,7 @@
 // Busca e filtro da aba Rastreio (pacotes).
+import { normalizeSearch as norm } from "@/lib/format"
 
 type PackageLike = { trackingCode: string; recipient: string; city: string | null; status: string }
-
-function norm(s: string) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-}
 
 /** Busca no código, destinatário e cidade (sem maiúsculas nem acentos) + status ("all" = todos). */
 export function filterPackages<T extends PackageLike>(items: T[], query: string, status: string): T[] {
