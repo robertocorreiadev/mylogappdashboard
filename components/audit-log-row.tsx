@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Trash2 } from "lucide-react"
 import { adminDeleteAuditLogEntry } from "@/app/actions/admin-override"
@@ -73,7 +74,8 @@ export function AuditLogRow({ log, canDelete = false }: { log: LogEntry; canDele
           disabled={isPending}
           onClick={() => startTransition(async () => {
             const res = await adminDeleteAuditLogEntry(log.id)
-            if (res?.success) setRemoved(true)
+            if (res?.success) { setRemoved(true); toast.success("Entrada de auditoria excluída") }
+            else if (res?.error) toast.error(res.error)
           })}
           aria-label="Excluir entrada (ADMIN MASTER)"
           title="Excluir entrada de auditoria (ADMIN MASTER) — fica registrado quem excluiu"

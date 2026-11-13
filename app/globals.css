@@ -2,7 +2,10 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
+/* `dark:` vale em todo o app quando o tema NÃO é o claro (o escuro é o padrão
+   do :root). Antes era `.dark *`, e nenhum elemento tinha a classe `.dark`:
+   todas as regras `dark:` dos componentes shadcn ficavam mortas. */
+@custom-variant dark (&:where(:root:not([data-theme="light"]) *));
 
 @theme inline {
   --font-heading: var(--font-sans);
@@ -12,6 +15,9 @@
      dá hierarquia tipográfica real ao conteúdo financeiro do dashboard sem
      custo de rede extra. Ver stats-overview.tsx. */
   --font-display: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --color-panel-jadlog: var(--panel-jadlog);
+  --color-panel-2: var(--panel-2);
+  --color-role-gestor: var(--role-gestor);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -52,17 +58,14 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Cor de marca própria do MyLog: índigo/violeta (hue ~255) — escolhida por
-   eliminação, não por gosto: laranja já é a cor de conteúdo do painel
-   "jadlog" (colidiria marca-vs-dado), azul já é a cor do "panel2", verde já
-   é a cor semântica de saldo positivo, vermelho já é destructive. Índigo é a
-   família de matiz mais distante de todas as quatro já reservadas no app.
-   Continua sem ser o roxo-azulado genérico de SaaS (~hue 265, tipo
-   Stripe/Linear) — puxado mais pro violeta/ameixa (~255) de propósito.
-   Tema escuro continua sendo o padrão incondicional (comportamento
-   inalterado pro usuário atual) — o tema claro abaixo é opt-in via
-   `[data-theme="light"]`, sem troca automática por enquanto (protótipo:
-   falta construir o toggle de UI antes de acoplar a `prefers-color-scheme`). */
+/* Cor de marca do MyLog: índigo/violeta (matiz ~255), escolhida por
+   eliminação: azul é o Painel 2, verde é saldo positivo, vermelho é erro e
+   valor negativo. O JADLOG usa a própria cor de marca (`--primary`).
+   Tokens de identidade (`--panel-jadlog`, `--panel-2`, `--role-gestor`):
+   cor de cada painel e do papel gestor em links e cartões, sem reaproveitar
+   uma cor que já tem sentido de dado (o verde de saldo, por exemplo).
+   Tema escuro = padrão (:root). Tema claro = `data-theme="light"` no <html>,
+   escolhido pelo usuário no botão de tema (cookie `theme`, lib/theme.ts). */
 :root {
   color-scheme: dark;
   --background: #0f1117;
@@ -97,12 +100,12 @@
   --sidebar-accent-foreground: #e8eaf0;
   --sidebar-border: #2e333d;
   --sidebar-ring: #8d7bdb;
+  --panel-jadlog: #8d7bdb;
+  --panel-2: #4f9dff;
+  --role-gestor: #e5a13a;
 }
 
-/* Tema claro real (mesmos nomes de token, valores próprios — nunca
-   reaproveita o par claro/escuro de outro projeto). Opt-in via
-   `data-theme="light"` no <html> (ainda sem toggle de UI, ver comentário
-   acima) — pensado pra já existir pronto quando o toggle for construído. */
+/* Tema claro: mesmos nomes de token, valores próprios. */
 :root[data-theme="light"] {
   color-scheme: light;
   --background: #f4f5f8;
@@ -136,6 +139,9 @@
   --sidebar-accent-foreground: #14171c;
   --sidebar-border: rgba(20, 23, 28, 0.12);
   --sidebar-ring: #5b3fa8;
+  --panel-jadlog: #5b3fa8;
+  --panel-2: #1f6fb2;
+  --role-gestor: #9a5b00;
 }
 
 @layer base {

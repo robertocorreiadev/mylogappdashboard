@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { Fragment, useState, useTransition, useMemo } from "react"
 import { Pencil, ClipboardList, TrendingUp, TrendingDown, Settings, Calendar, CheckCircle2, Clock, AlertTriangle, Receipt, Download } from "lucide-react"
 import type { DailyRecord } from "@/lib/db/schema"
@@ -95,8 +96,10 @@ function RecordForm({
     fd.set("valuePerDelivery", vpdStr)
     startTransition(async () => {
       const res = await onSave(fd)
-      if (res?.error) setError(res.error)
-      else onClose()
+      if (res?.error) { setError(res.error); return }
+      const d = String(fd.get("date") ?? "")
+      toast.success(d ? `Boleta de ${d.slice(8, 10)}/${d.slice(5, 7)} salva` : "Boleta salva")
+      onClose()
     })
   }
 
@@ -260,7 +263,7 @@ function RecordRow({
 
       {!readOnly && (
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Editar boleta — {fmtBR(record.date)}</DialogTitle>
               <DialogDescription>Altere os dados do dia e salve.</DialogDescription>

@@ -1,5 +1,6 @@
 "use client"
 
+import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useTransition } from "react"
 import { Package, LogOut, Settings, KeyRound, User } from "lucide-react"
 import { logout, updateProfile, changePassword } from "@/app/actions/auth"
@@ -160,6 +161,8 @@ export function DashboardHeader({
             <p className="text-sm font-semibold text-foreground">{userName}</p>
           </div>
 
+          <ThemeToggle className="h-9 w-9 text-muted-foreground hover:text-foreground" />
+
           {/* Engrenagem → abre modal de configurações (não faz sentido no drill-down do gestor) */}
           {!viewerMode && (
             <Button
@@ -204,7 +207,7 @@ export function DashboardHeader({
 
       {/* Modal de configurações com abas */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-primary" />

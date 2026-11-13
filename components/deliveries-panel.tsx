@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Plus, Package, Download } from "lucide-react"
 import type { Delivery } from "@/lib/db/schema"
@@ -70,6 +71,7 @@ export function DeliveriesPanel({
       const res = await onCreate(formData)
       if (res?.error) { setError(res.error); return }
       setOpen(false)
+      toast.success("Entrega cadastrada")
     })
   }
 
@@ -107,7 +109,7 @@ export function DeliveriesPanel({
                   </Button>
                 }
               />
-              <DialogContent>
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Nova entrega</DialogTitle>
                   <DialogDescription>Cadastre um novo pacote para acompanhamento.</DialogDescription>
@@ -219,7 +221,14 @@ function DeliveryRow({
         ) : (
           <Select
             defaultValue={delivery.status}
-            onValueChange={(v) => startTransition(() => onUpdateStatus(delivery.id, String(v)))}
+            onValueChange={(v) => startTransition(async () => {
+              try {
+                await onUpdateStatus(delivery.id, String(v))
+                toast.success(`Status: ${statusLabel(String(v))}`)
+              } catch {
+                toast.error("Não foi possível mudar o status. Atualize a página e tente de novo.")
+              }
+            })}
           >
             <SelectTrigger className="h-8 w-[140px] border-0 bg-transparent p-0 focus:ring-0">
               <Badge className={`${statusStyles[delivery.status] ?? ""} border-0`}>

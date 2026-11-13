@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useMemo, useState, useTransition } from "react"
 import { Plus, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
@@ -46,6 +47,7 @@ function TransactionForm({
       if (initial) { fd.append("id", String(initial.id)); res = await onUpdate(fd) }
       else res = await onCreate(fd)
       if (res?.error) { setError(res.error); return }
+      toast.success(initial ? "Lançamento atualizado" : "Lançamento salvo")
       onClose()
     })
   }
@@ -145,7 +147,7 @@ function TransactionRow({
       </TableRow>
       {!readOnly && (
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Editar lançamento</DialogTitle>
               <DialogDescription>Altere os dados e salve.</DialogDescription>
@@ -261,7 +263,7 @@ export function FinancePanel({
                 <DialogTrigger render={<Button size="sm" className="gap-2" />}>
                   <Plus className="h-4 w-4" />Novo lançamento
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Novo lançamento</DialogTitle>
                     <DialogDescription>Registre uma receita ou despesa.</DialogDescription>

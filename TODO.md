@@ -421,6 +421,37 @@ espremido no fim desta revisão.
       viram aliases de `verify-full` numa versão futura). Trocar para
       `sslmode=verify-full` explícito no `.env` e na Vercel, e testar.
 
+## Redesign de layout — Fase 1: fundação visual (2026-11-13)
+Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheerful-torvalds.md`.
+- [x] Variante `dark:` ligada (`:root:not([data-theme=light]) *`); antes as
+      regras `dark:` do shadcn estavam mortas.
+- [x] Tema claro com botão (cookie `theme`, `lib/theme.ts` + teste,
+      `app/actions/theme.ts`, `components/theme-toggle.tsx`); layout
+      escreve `data-theme` no servidor; `generateViewport` com a cor do tema.
+      D15 confirmado corrigido: `html`/`body` em `#f4f5f8` no claro.
+- [x] Toasts (`sonner` 2.0.8) em todas as mutações; `ConfirmDeleteButton`
+      agora mostra o `{ error }` da action em vez de fechar.
+- [x] `loading.tsx` (esqueleto) nas rotas de painel, `error.tsx` e
+      `not-found.tsx` em português. Efeito colateral documentado na spec §8:
+      `redirect()` nessas rotas vira meta refresh (200), sem dado no HTML.
+- [x] Dialog rola em tela baixa; larguras com `sm:max-w-*`; "Fechar".
+- [x] Alvos de toque de 40 px em tela de toque (`pointer-coarse:`).
+- [x] Tokens `--panel-jadlog`, `--panel-2`, `--role-gestor` (uso na Fase 2,
+      com a reescrita do `/select`).
+- [x] `pnpm-lock.yaml` sincronizado com pnpm 10 numa cópia isolada (spec §2.1).
+- [x] Smoke test (2026-11-13): público pelo Chrome DevTools (login nos dois
+      temas, 404, Toaster); logado no Chrome do usuário: `/dashboard`,
+      `/panel2` (azul no claro), `/gestor`, auditoria (74 entradas, todas as
+      organizações), `/gestao`; troca de tema e persistência; modal "Editar
+      boleta" com 672 px, rolagem e "Fechar"; modal de excluir → Cancelar
+      (nada excluído). Sem salvar nada: o dev usa o banco de produção.
+      Achado e corrigido: trocar o tema e navegar logo depois perdia a
+      escolha (a navegação cancela a action) → cookie gravado no cliente.
+- [ ] Não testado: toasts de sucesso (exigem gravar no banco de produção) e
+      a tela em 375 px (a janela do Chrome não redimensionou). Ver na Fase 3.
+- [ ] Fase 3: no modal "Editar boleta", a data aparece cortada na grade de 5
+      colunas.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

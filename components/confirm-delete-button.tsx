@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,8 +32,14 @@ export function ConfirmDeleteButton({
       // Sem o catch, uma falha (sessão vencida, erro no banco) derrubaria o
       // painel inteiro na página de erro. Aqui ela aparece dentro do modal.
       try {
-        await onConfirm()
+        const res = await onConfirm()
+        // As actions devolvem { error } em vez de lançar (D12).
+        if (res && typeof res === "object" && "error" in res && typeof res.error === "string" && res.error) {
+          setError(res.error)
+          return
+        }
         setOpen(false)
+        toast.success("Excluído", { description: itemLabel.charAt(0).toUpperCase() + itemLabel.slice(1) })
       } catch {
         setError("Não foi possível excluir. Atualize a página e tente de novo.")
       }

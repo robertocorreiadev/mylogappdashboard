@@ -61,7 +61,7 @@ Os dados de um painel nunca se misturam com os do outro.
   "dependencies": {
     "@base-ui/react": "^1.5.0", "@vercel/analytics": "1.6.1", "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1", "drizzle-orm": "^0.45.2", "lucide-react": "^1.16.0", "next": "16.3.2",
-    "pg": "^8.22.0", "react": "^19", "react-dom": "^19", "recharts": "3.8.0", "shadcn": "^4.8.0",
+    "pg": "^8.22.0", "react": "^19", "react-dom": "^19", "recharts": "3.8.0", "shadcn": "^4.8.0", "sonner": "2.0.8",
     "tailwind-merge": "^3.3.1", "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
@@ -73,6 +73,7 @@ Os dados de um painel nunca se misturam com os do outro.
 ```
 
 - O deploy é na **Vercel** e usa **pnpm**. `pnpm-lock.yaml` DEVE ficar em sincronia com `package.json`, senão o deploy falha.
+  - O lock foi gerado com **pnpm 10** (tem campos `libc`; o pnpm 9 apaga esses campos). Para sincronizar sem mexer no `node_modules` (que é do npm), copiar `package.json` e `pnpm-lock.yaml` para uma pasta temporária, rodar `npx pnpm@10 install --lockfile-only` lá e trazer só o lock de volta. Rodar o pnpm na pasta do projeto pede para apagar e reinstalar o `node_modules`.
 - O CI usa **npm**. `package-lock.json` também DEVE ficar em sincronia.
 - **CI** (`.github/workflows/ci.yml`): roda em todo push para `main` e em todo PR, em `ubuntu-latest` com Node 22 (cache npm). Passos:
   1. `npm ci`;
@@ -98,6 +99,14 @@ Os dados de um painel nunca se misturam com os do outro.
 
 Gerados pelo shadcn com o estilo `base-nova` sobre **Base UI** (`@base-ui/react`), não Radix: `badge`, `button`, `card`, `chart`, `dialog`, `input`, `label`, `select`, `table`, `tabs`. Para gerar de novo: `npx shadcn add badge button card chart dialog input label select table tabs`.
 
+Escritos à mão (sem o CLI):
+- `skeleton.tsx`: `div` com `animate-pulse rounded-md bg-muted` e `aria-hidden`.
+- `sonner.tsx`: `Toaster` do `sonner` que recebe o tema do layout (prop `theme`, não `next-themes`), `position="top-center"`, `closeButton`, `richColors` e as cores `--normal-bg/text/border` ligadas a `--popover`, `--popover-foreground` e `--border`.
+
+Ajustes locais nos gerados (DEVE manter ao regenerar):
+- `dialog.tsx`: o conteúdo tem `max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain` (rola em celular baixo). O padrão é `sm:max-w-sm`; quem precisa de mais largura passa `sm:max-w-*` (um `max-w-*` sem prefixo perde para o `sm:max-w-sm`). O botão de fechar diz `"Fechar"`.
+- `button.tsx` e `tabs.tsx`: em tela de toque (`pointer-coarse:`) os tamanhos sobem para 40 px (`default`, `icon`, `icon-sm`; `sm` = 36 px; lista de abas = 40 px).
+
 Contratos do Base UI que o código usa (DEVE manter):
 - `DialogTrigger` recebe o botão pela prop `render={<Button .../>}`. Não usa `asChild`, porque `asChild` causava botão dentro de botão e erro de hidratação.
 - `Select.onValueChange` recebe `value | null`.
@@ -113,8 +122,11 @@ Contratos do Base UI que o código usa (DEVE manter):
   - `title: "MYLOG · Painel de Controle"`;
   - `description: "Portal de gestão de entregas e financeiro MYLOG"`;
   - ícones `/icon-light-32x32.png` (tema claro), `/icon-dark-32x32.png` (tema escuro), `/icon.svg` e `apple: /apple-icon.png`.
-- Viewport: `colorScheme: "light dark"`; `themeColor` branco no tema claro e preto no escuro.
-- `<html lang="pt-BR" className="{fontes} bg-background">` e `<body className="font-sans antialiased">`.
+- O layout é `async`: lê o cookie `theme` (`parseTheme`, `lib/theme.ts`: só `"light"` vale claro; qualquer outro valor ou nenhum = escuro).
+- `generateViewport()` (não o objeto `viewport`): `colorScheme` = o tema; `themeColor` = `#0f1117` (escuro) ou `#f4f5f8` (claro), a cor de `--background`.
+- `<html lang="pt-BR" data-theme="{tema}" className="{fontes} bg-background">` e `<body className="font-sans antialiased">`.
+- `<Toaster theme={tema}/>` (`components/ui/sonner.tsx`) logo depois do conteúdo.
+- Sem `generator` nos metadados.
 - `<Analytics/>` da Vercel só quando `NODE_ENV === "production"`.
 
 ---
@@ -473,6 +485,12 @@ Os parâmetros opcionais `knownUser` (em `auth.ts`) e `known?: MembershipContext
 
 Todas as páginas de painel usam `<main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">`.
 
+Estados de rota:
+- `loading.tsx` em `/dashboard`, `/panel2`, `/gestor`, `/gestor/entregadores/[userId]` (`PageSkeleton`, 5 cartões) e em `/gestor/auditoria` e `/gestao` (`PageSkeleton cards={0}`). `components/page-skeleton.tsx`: cabeçalho, cartões, abas e um bloco grande em `Skeleton`, com `aria-busy` e `"Carregando…"` para leitor de tela.
+- Consequência do streaming: nessas rotas, o `redirect()` (sem login, sem papel) não é mais um 307. A resposta é 200 com o esqueleto, uma `<meta http-equiv="refresh">` e a navegação no cliente (comportamento documentado do Next 16). Nenhum dado do painel vai no HTML.
+- `app/error.tsx` (client): ícone de alerta, `"Algo deu errado"`, `"Não foi possível carregar esta tela. Tente de novo. Se o erro continuar, volte ao início."`, botões `"Tentar de novo"` (`retry()`, API do Next 16.3) e `"Voltar ao início"` (`/select`).
+- `app/not-found.tsx`: `"Página não encontrada"`, `"O endereço não existe ou você não tem acesso a ele."` e `"Voltar ao início"` (`/select`).
+
 ---
 
 ## 9. Server actions de dados
@@ -723,6 +741,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
    - **Não** existem `"+ nuvem"` nem o indicador `"sincronizado"`.
 3. **Direita:**
    - `"Logado como"` + nome **[DECIDIR Q1]**;
+   - botão de tema (sol/lua, `aria-label "Trocar tema claro/escuro"`, `components/theme-toggle.tsx`): troca o `data-theme` do `<html>` e a `meta theme-color` na hora, grava o cookie no cliente no mesmo clique (1 ano, `samesite=lax`) e chama a action `setTheme` (`app/actions/theme.ts`, mesmo cookie, sem login), que atualiza o layout. O cookie no cliente existe porque navegar antes de a action terminar cancela a action;
    - engrenagem (escondida no modo de visualização);
    - `"Gestão"` (só com `isAdmin` e fora do modo de visualização);
    - `"⇄ Trocar painel"` (escondido no modo de visualização);
@@ -970,8 +989,8 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 - Colunas: `"Nome"`, `"E-mail"`, `"Login"` (badge `"Google"` ou `"Senha"`), `"Criado em"` e `"Ações"`.
 - Ações por linha:
   - escudo → `/gestor/entregadores/{id}` (modo ADMIN MASTER);
-  - lápis → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."`: campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, sucesso `"Dados atualizados!"` e fecha;
-  - chave → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, sucesso `"Senha redefinida!"` e fecha;
+  - lápis → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."`: campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, fecha e mostra o toast `"Dados atualizados!"`;
+  - chave → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, fecha e mostra o toast `"Senha redefinida!"`;
   - lixeira (desabilitada para o próprio admin) → modal `"Excluir {nome}?"` / `"Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."`, botão `"Excluir permanentemente"` (`"Excluindo..."`); o erro aparece no modal.
 
 ---
@@ -1005,7 +1024,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - azul é a cor do Painel 2;
   - verde é a cor de saldo positivo;
   - vermelho é a cor de erro e de valor negativo.
-- **O tema padrão é o escuro (`:root`), sempre.** O tema claro existe só como tokens, ativado por `<html data-theme="light">`. Ainda não há botão para trocar de tema.
+- **O tema padrão é o escuro (`:root`).** O claro vale com `<html data-theme="light">`, escolhido pelo usuário no botão de tema (cookie `theme`, §2.4 e §11.3).
 
 | Token | Escuro (`:root`, padrão) | Claro (`:root[data-theme="light"]`) |
 |---|---|---|
@@ -1045,9 +1064,28 @@ Modais e menus (Dialog, Select) renderizam num portal no `<body>`, fora do `<mai
 
 Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foreground }`.
 
+**Variante `dark:`**: `@custom-variant dark (&:where(:root:not([data-theme="light"]) *))`. As regras `dark:` dos componentes shadcn valem em todo o app, menos no tema claro. (Antes era `.dark *`, e nenhum elemento tinha `.dark`: as regras ficavam mortas.)
+
+**Tokens de identidade** (nos dois temas, com `--color-*` no `@theme inline`):
+
+| Token | Escuro | Claro | Uso |
+|---|---|---|---|
+| `--panel-jadlog` | `#8d7bdb` | `#5b3fa8` | cor do JADLOG em links e cartões |
+| `--panel-2` | `#4f9dff` | `#1f6fb2` | cor do Painel 2 em links e cartões |
+| `--role-gestor` | `#e5a13a` | `#9a5b00` | cor do papel gestor (não reaproveita o verde de saldo) |
+
+**Toasts** (`sonner`, `toast.success` / `toast.error`), textos exatos:
+- boleta salva → `"Boleta de DD/MM salva"`;
+- excluir pelo `ConfirmDeleteButton` → `"Excluído"` + o item com inicial maiúscula (ex.: `"A boleta de 09/11/2026"`); se a action devolver `{ error }`, o erro aparece no modal e ele não fecha;
+- entrega → `"Entrega cadastrada"`; status → `"Status: {rótulo}"`, falha → `"Não foi possível mudar o status. Atualize a página e tente de novo."`;
+- lançamento → `"Lançamento salvo"` / `"Lançamento atualizado"`;
+- convite → `"Link de convite gerado"` (`"Copie e envie ao entregador."`), `"Convite revogado"`, `"Convites pendentes revogados"`;
+- auditoria → `"Entrada de auditoria excluída"`; erro da action → o texto do erro;
+- `/gestao` → `"Organização criada"`, `"Dados atualizados!"`, `"Senha redefinida!"`, `"{nome} excluído"`.
+
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **93/93**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **98/98**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
@@ -1058,6 +1096,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 | `lib/forms.test.ts` | `parseMoney` (ponto e vírgula, vazio → 0, recusa negativo, texto, 3 casas, notação científica e valor grande); `parseCount` (inteiro ≥ 0, vazio → 0, recusa negativo, decimal, texto e acima do limite); `parseISODate` (válida; recusa formato errado e data inexistente); `parseDailyRecordForm`, `parseDeliveryForm` e `parseTransactionForm` (normalização, padrões, mensagens, painel/status/tipo inválidos, id na edição, 'hoje' recebido) |
 | `lib/dates.test.ts` | `localDateISO` usa a data local (23:30 continua o mesmo dia) e preenche com 2 dígitos; `todayISOIn` em São Paulo antes e depois das 03:00 UTC |
 | `lib/metrics.test.ts` | `recordGross`; `recordNet` (normal e negativo); `netByQuinzena`: null sem boletas; dia 15 vai para a 1ª e dia 16 para a 2ª; mês de referência na virada do ano; ignora outros meses; `lastDay`; 2ª quinzena vazia; `days` conta datas distintas; valor negativo; soma das quinzenas = líquido do mês |
+| `lib/theme.test.ts` | `parseTheme` (`light`/`dark`; vazio, maiúsculas e lixo → escuro); `themeColor` dos dois temas; nome do cookie `theme` |
 | `lib/user-deletion.test.ts` | `planUserDeletion`: sem organização própria → pode; organização só dele → vai junto; dono de organização com outros membros → recusa com o nome; recusa se qualquer organização própria for compartilhada |
 | `lib/theme-tokens.test.ts` | todo token do tema escuro existe no claro e vice-versa (exceto `radius`); o Painel 2 tem a mesma lista de tokens nos dois temas |
 | `lib/db/scopes.test.ts` | **teste de arquitetura**: nenhum arquivo `app/actions/*.ts` contém `.from(T)`, `db.update(T)`, `db.delete(T)` ou `db.insert(T)` para `T` ∈ {`dailyRecords`, `deliveries`, `transactions`} |

@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Pencil, KeyRound, Trash2, Users, ShieldAlert } from "lucide-react"
 import { updateUserAdmin, setUserPasswordAdmin, deleteUserAdmin } from "@/app/actions/admin-users"
@@ -33,7 +34,7 @@ function EditUserForm({ user, onClose }: { user: AdminUser; onClose: () => void 
     startTransition(async () => {
       const res = await updateUserAdmin(fd)
       if (res?.error) setMsg({ type: "err", text: res.error })
-      else            { setMsg({ type: "ok", text: "Dados atualizados!" }); onClose() }
+      else            { toast.success("Dados atualizados!"); onClose() }
     })
   }
 
@@ -71,7 +72,7 @@ function ResetPasswordForm({ userId, onClose }: { userId: number; onClose: () =>
     startTransition(async () => {
       const res = await setUserPasswordAdmin(fd)
       if (res?.error) setMsg({ type: "err", text: res.error })
-      else            { setMsg({ type: "ok", text: "Senha redefinida!" }); onClose() }
+      else            { toast.success("Senha redefinida!"); onClose() }
     })
   }
 
@@ -113,7 +114,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
     startTransition(async () => {
       const res = await deleteUserAdmin(fd)
       if (res?.error) setDeleteErr(res.error)
-      else            setDeleteOpen(false)
+      else            { setDeleteOpen(false); toast.success(`${user.name} excluído`) }
     })
   }
 

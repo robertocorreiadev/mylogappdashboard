@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Building2 } from "lucide-react"
 import { createOrganizationForGestor } from "@/app/actions/organizations"
@@ -35,6 +36,7 @@ export function CreateOrganizationPanel({ users }: { users: ExistingUser[] }) {
       } else {
         setMsg(null)
         setOpen(false)
+        toast.success("Organização criada")
       }
     })
   }
@@ -45,7 +47,7 @@ export function CreateOrganizationPanel({ users }: { users: ExistingUser[] }) {
         <Building2 className="h-4 w-4" />
         Nova organização
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nova organização</DialogTitle>
           <DialogDescription>

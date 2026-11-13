@@ -44,7 +44,12 @@ transação, com `FOR UPDATE`. Spec §7.2, §8, §9.6, §11.9, §11.11, §13 e �
 atualizadas; `TODO.md` com a seção "D8, D10 e D15". tsc limpo, 93/93,
 build ok. Dry-run do D8 no banco real com ROLLBACK (OK do usuário): os 3
 caminhos certos (detalhe no `TODO.md`). Commit + push da Fase 0 em 2026-11-13.
-**Próximo:** Fase 1 do plano (fundação visual).
+
+
+**Fase 1 (fundação visual) — feita (2026-11-13).**
+tsc limpo, 98/98, build ok, smoke test público e logado ok. Commit + push
+em 2026-11-13. **Próximo:** Fase 2 (navegação fixa por papel). Detalhe no
+`TODO.md`.
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

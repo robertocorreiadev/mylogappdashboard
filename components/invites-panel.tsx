@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useState, useTransition } from "react"
 import { Mail, Copy, X, Check, ShieldOff } from "lucide-react"
 import { createInvite, revokeInvite, revokeAllPendingInvites } from "@/app/actions/invites"
@@ -30,6 +31,7 @@ function NewInviteDialog({ onCreated }: { onCreated: (url: string) => void }) {
       const res = await createInvite(fd)
       onCreated(res.url)
       setOpen(false)
+      toast.success("Link de convite gerado", { description: "Copie e envie ao entregador." })
     })
   }
 
@@ -98,7 +100,10 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
               <Button
                 size="sm" variant="ghost" className="gap-1.5 text-muted-foreground hover:text-destructive"
                 disabled={isPending}
-                onClick={() => startTransition(() => revokeAllPendingInvites())}
+                onClick={() => startTransition(async () => {
+                  await revokeAllPendingInvites()
+                  toast.success("Convites pendentes revogados")
+                })}
               >
                 <ShieldOff className="h-3.5 w-3.5" /> Revogar todos
               </Button>
@@ -129,7 +134,10 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
                   disabled={isPending}
-                  onClick={() => startTransition(() => revokeInvite(inv.id))}
+                  onClick={() => startTransition(async () => {
+                    await revokeInvite(inv.id)
+                    toast.success("Convite revogado")
+                  })}
                   aria-label="Revogar convite"
                 >
                   <X className="h-4 w-4" />
