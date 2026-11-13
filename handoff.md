@@ -71,8 +71,14 @@ final do usuário.**
 **Fase 6 (fechamento) — feita (2026-11-13).** Revisão de código das Fases 4
 e 5: 6 correções, 1 "não é defeito", 3 débitos (seção no `TODO.md`). Spec
 §14.2 (critérios de aceite) atualizada. 142/142, build ok.
-**Falta:** revisão final do usuário e **push** de 3 commits locais
-(Fases 4, 5 e as correções da revisão) — só com o OK dele.
+Revisado e aprovado pelo usuário; push em 2026-11-13. Vercel: produção =
+`7e32398` (Ready). **Redesign concluído (Fases 0–6).**
+
+**⏭️ Próxima sessão — começar por aqui:** conferir em produção o que não
+dava para testar sem gravar no banco: salvar uma boleta (toast, form limpo),
+criar/compartilhar/revogar convite, editar pacote, "Trocar conta" no
+convite. Depois: débitos do `TODO.md` (seção "revisão de código das Fases 4
+e 5") e a base de teste de pior caso.
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail
