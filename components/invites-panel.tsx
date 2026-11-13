@@ -1,7 +1,7 @@
 "use client"
 
 import { toast } from "sonner"
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { Mail, Copy, X, Check, ShieldOff, Share2 } from "lucide-react"
 import { ConfirmButton } from "@/components/confirm-dialog"
 import { createInvite, revokeInvite, revokeAllPendingInvites } from "@/app/actions/invites"
@@ -82,12 +82,38 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
   const [copied, setCopied] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
+  const linkRef = useRef<HTMLSpanElement>(null)
+
+  /** Seleciona o texto do link, para o usuário copiar à mão. */
+  function selectLink() {
+    const el = linkRef.current
+    if (!el) return
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
   function handleCopy() {
     if (!link) return
-    navigator.clipboard.writeText(link).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    // Sem área de transferência (navegador antigo, permissão negada ou página
+    // sem HTTPS): avisa e deixa o link selecionado, em vez de falhar calado.
+    if (!navigator.clipboard?.writeText) {
+      selectLink()
+      toast.error("Não foi possível copiar automaticamente", { description: "O link está selecionado: copie com Ctrl+C ou toque e segure." })
+      return
+    }
+    navigator.clipboard.writeText(link).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      },
+      () => {
+        selectLink()
+        toast.error("Não foi possível copiar automaticamente", { description: "O link está selecionado: copie com Ctrl+C ou toque e segure." })
+      },
+    )
   }
 
   // Celular: abre a folha de compartilhar do sistema (WhatsApp, SMS...).
@@ -124,7 +150,7 @@ export function InvitesPanel({ invites, acceptedInvites }: { invites: Invite[]; 
 
         {link && (
           <div className="mb-4 flex items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs">
-            <span className="flex-1 truncate font-mono">{link}</span>
+            <span ref={linkRef} onClick={selectLink} className="flex-1 cursor-text truncate font-mono select-all" title="Clique para selecionar o link">{link}</span>
             {canShare && (
               <Button size="sm" className="gap-1" onClick={handleShare}>
                 <Share2 className="h-3.5 w-3.5" aria-hidden="true" /> Compartilhar

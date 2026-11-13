@@ -136,8 +136,8 @@ Contratos do Base UI que o código usa (DEVE manter):
 
 | Nome | Uso |
 |---|---|
-| `DATABASE_URL` | String de conexão Postgres (Neon, com pool). `lib/db/index.ts` usa esta. |
-| `DATABASE_URL_UNPOOLED` | Conexão direta. Existe no `.env`, mas o código não a lê. |
+| `DATABASE_URL` | String de conexão Postgres (Neon, com pool). `lib/db/index.ts` usa esta. Use `sslmode=verify-full`: com `require`, o `pg` 8.22 mostra um aviso de segurança (no `pg` 9, `require` passa a ser mais fraco). |
+| `DATABASE_URL_UNPOOLED` | Conexão direta. Existe no `.env`, mas o código não a lê. Mesmo `sslmode=verify-full`. |
 | `SESSION_SECRET` | Chave HMAC do cookie de sessão. Sem ela, `getSecret()` lança `"SESSION_SECRET não configurado"`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth do Google. |
 | `NEXT_PUBLIC_BASE_URL` | URL pública, sem `/` no fim. Monta o redirect do OAuth e o link de convite. |
@@ -886,7 +886,7 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
    - `"Expira em"`: `"1 dia"` / `"7 dias"` (padrão) / `"30 dias"` / `"Sem expiração"`.
 
    Botão `"Gerar link"` (`"Gerando..."`). Toast `"Link de convite gerado"` / `"Compartilhe ou copie e envie ao entregador."`.
-4. O link gerado aparece numa caixa com `"Compartilhar"` (só onde o navegador tem `navigator.share`, como no celular: abre a folha do sistema com título `"Convite MyLog"`, texto `"Entre na nossa operação no MyLog:"` e o link) e `"Copiar"` (muda para `"Copiado"` por 2 s).
+4. O link gerado aparece numa caixa (clicar no texto seleciona o link inteiro) com `"Compartilhar"` (só onde o navegador tem `navigator.share`, como no celular: abre a folha do sistema com título `"Convite MyLog"`, texto `"Entre na nossa operação no MyLog:"` e o link) e `"Copiar"` (muda para `"Copiado"` por 2 s). Se o navegador recusar a área de transferência (permissão negada, sem HTTPS, sem API): toast de erro `"Não foi possível copiar automaticamente"` / `"O link está selecionado: copie com Ctrl+C ou toque e segure."` e o link fica selecionado.
 5. Lista de pendentes: `"{email | Link genérico} · expira {DD/MM/AAAA}"` + botão X (`aria-label "Revogar convite {email | genérico}"`) → confirmação `"Revogar este convite?"` / `"O link [de {email}] para de funcionar na hora. Essa ação não pode ser desfeita."`. Vazia → `"Nenhum convite pendente."`.
 6. Botão `"Ver"` / `"Ocultar"` `"histórico de convites aceitos ({n})"`. Cada item: `"{nome} aceitou {o convite de email | um convite} em {data}"`. Vazio → `"Nenhum convite aceito ainda."`.
 

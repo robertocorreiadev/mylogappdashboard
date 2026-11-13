@@ -415,10 +415,12 @@ espremido no fim desta revisão.
       organização). Testado no navegador em 2026-11-09 (63/63 entradas).
 - [x] D15: não se reproduz em dev nem no build (2026-11-09). Guarda em
       `lib/theme-tokens.test.ts`. Revalidar ao criar o botão de tema.
-- [ ] Débito: o driver `pg` (8.22) mostra um aviso de segurança sobre o
-      `sslmode` do `DATABASE_URL` (os modos `prefer`/`require`/`verify-ca`
-      viram aliases de `verify-full` numa versão futura). Trocar para
-      `sslmode=verify-full` explícito no `.env` e na Vercel, e testar.
+- [x] `sslmode=verify-full` no `.env` local (2026-11-13): testado com
+      `select 1` nos dois modos — `verify-full` conecta e o aviso some.
+- [ ] Na Vercel (Settings → Environment Variables → `DATABASE_URL` e
+      `DATABASE_URL_UNPOOLED`): trocar `sslmode=require` por
+      `sslmode=verify-full` e fazer redeploy. Fica para o usuário: o valor
+      contém a senha do banco.
 
 ## Redesign de layout — Fase 1: fundação visual (2026-11-13)
 Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheerful-torvalds.md`.
@@ -576,6 +578,30 @@ Débito (eficiência/repetição, para uma tarefa própria):
       `package-filter` (2026-11-13).
 - [x] Textos da auditoria em `lib/audit-format.ts` (`auditEntityPlural`,
       `auditFieldLabel`) (2026-11-13).
+
+## Testes em produção (2026-11-13, autorizados pelo usuário)
+Em painelmylog.vercel.app, com a conta do admin, deixando o banco como
+estava (a auditoria registra cada passo, 09:21–09:22):
+- [x] Boleta no Painel 2 em 02/01/2020 (data sem dados): salvar (toast
+      "Boleta de 02/01 salva", form limpo, valor por entrega 2,00 da última
+      boleta, vírgula "1,5" → R$ 1,50); salvar a mesma data (aviso "Já
+      existe boleta em 02/01/2020" → Substituir); editar (data travada, 9
+      entregas); excluir (foco em Cancelar, toast "Excluído"). Ano 2020
+      some do filtro depois.
+- [x] Pacote TESTE-MYLOG-001: cadastrar (12,5 → R$ 12,50), busca sem
+      acento ("sao jose"), sem resultado, chips de status, status "Em
+      trânsito" pelo select, editar (cidade), excluir. Cartão volta a 0.
+- [x] Convites: gerar com e-mail e genérico; tela do convite com sessão
+      ("Você está entrando como…", "Trocar conta" com destino seguro);
+      aceitar com outra conta → "Este convite é exclusivo para…" (nada
+      aceito); "Revogar os 2 convites pendentes?" → toast; revogar um →
+      toast; link revogado → "Este convite foi revogado.".
+- [x] Achado e corrigido: "Copiar" falhava calado quando o navegador não
+      liberava a área de transferência. Agora avisa e seleciona o link
+      (testado com recusa e sucesso simulados).
+- [ ] Não testado (desconectaria a sessão do usuário, e o Claude não pode
+      entrar com a senha dele): clicar em "Trocar conta" e o login com
+      Google. O destino seguro do "Trocar conta" tem teste automático.
 
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09; feita 2026-11-13)
 - [x] `lib/fixtures/worst-case.ts` + `lib/worst-case.test.ts` (14 testes):

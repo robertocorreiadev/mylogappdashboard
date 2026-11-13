@@ -83,18 +83,24 @@ script de seed com trava contra o banco de produção, não executado).
 incluindo a trava do seed que não via o host `-pooler` do Neon) e enviado
 com o OK do usuário em 2026-11-13.
 
-**⏭️ Próxima sessão — o que ficou para o usuário (exige gravar no banco de
-produção, credencial ou decisão dele):**
-1. Conferir em produção: salvar uma boleta (toast, form limpo), criar /
-   compartilhar / revogar convite, editar pacote, "Trocar conta" no convite.
-2. Testar o login com Google em produção (D1, de 2026-11-09).
-3. Aviso `sslmode` do driver `pg`: trocar para `sslmode=verify-full` no
-   `.env` e na Vercel (variável de ambiente) e testar.
-4. Criar um banco de teste (branch do Neon) e rodar
-   `scripts/seed-worst-case.ts` para smoke tests com dados de pior caso.
-5. Task-observer: instalar a correção em staging do hook
-   `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`), que ainda
-   dispara a triagem de investimento por engano (observation 0026).
+**Testes em produção feitos em 2026-11-13 (autorizados pelo usuário):**
+boleta, pacote e convites, de ponta a ponta, deixando o banco como estava
+(detalhe no `TODO.md`, seção "Testes em produção"). Achado e corrigido: o
+"Copiar" do convite falhava calado sem permissão da área de transferência.
+`.env` local com `sslmode=verify-full` (testado).
+
+**⏭️ Próxima sessão — o que ficou para o usuário (credencial, sessão dele
+ou decisão dele):**
+1. Na Vercel, trocar `sslmode=require` por `sslmode=verify-full` em
+   `DATABASE_URL` e `DATABASE_URL_UNPOOLED` e fazer redeploy (o valor tem a
+   senha do banco: o Claude não digita credenciais).
+2. Testar o login com Google e o "Trocar conta" (os dois desconectam a
+   sessão; o Claude não pode entrar de novo com a senha).
+3. Criar um banco de teste (branch do Neon) e rodar
+   `scripts/seed-worst-case.ts` (a connection string tem senha).
+4. Task-observer: instalar a correção em staging do hook
+   `mastermind_funnel.py` (`skill-updates/2026-11-09/hooks/`, observation
+   0026).
 
 (O antigo "começar por aqui" de 2026-11-09 — login com Google em produção e
 conferir salvamentos — entrou na lista "o que ficou para o usuário" acima.)
