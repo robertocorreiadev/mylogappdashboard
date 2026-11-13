@@ -71,26 +71,30 @@ export function StatsOverview({
     { label: "Entregas realizadas", value: String(totalDelivered), hint: `${workDays} dias trabalhados`, icon: Truck, color: "text-primary" },
     { label: "Fat. bruto acumulado", value: formatCurrency(totalGross), hint: `Despesas: ${formatCurrency(totalExpDR)}`, icon: TrendingUp, color: "text-[var(--chart-2)]" },
     { label: "Fat. líquido acumulado", value: formatCurrency(totalNet), hint: `Média/dia: ${formatCurrency(avgNet)}`, icon: Wallet, color: totalNet >= 0 ? "text-[var(--chart-2)]" : "text-destructive", split: true },
-    { label: "Rastreio (total)", value: String(deliveries.length), hint: `${deliveries.filter(d => d.status === "pendente" || d.status === "em_transito").length} em aberto`, icon: Package, color: "text-[var(--chart-4)]" },
-    { label: "Saldo financeiro", value: formatCurrency(saldo), hint: saldo >= 0 ? "Positivo" : "Negativo", icon: saldo >= 0 ? TrendingUp : TrendingDown, color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
+    { label: "Pacotes no rastreio", value: String(deliveries.length), hint: `${deliveries.filter(d => d.status === "pendente" || d.status === "em_transito").length} em aberto`, icon: Package, color: "text-[var(--chart-4)]" },
+    // A dica traz receitas e despesas: a aba Financeiro não repete mais esse resumo.
+    { label: "Saldo financeiro", value: formatCurrency(saldo), hint: `Receitas ${formatCurrency(receita)} · Despesas ${formatCurrency(despesa)}`, icon: saldo >= 0 ? TrendingUp : TrendingDown, color: saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive" },
   ]
 
   return (
     <section className="mb-6">
       {periodLabel && (
         <p className="mb-2 text-xs font-medium text-muted-foreground">
-          Exibindo período: <span className="text-foreground">{periodLabel}</span>
+          Período: <span className="text-foreground">{periodLabel}</span>
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      {/* Celular: faixa com rolagem lateral (um cartão e meio à vista), para a
+          boleta aparecer logo. lg: grade de 5. A faixa rola sozinha: a página
+          não ganha rolagem lateral. */}
+      <div className="-mx-4 flex items-start snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:-mx-6 md:px-6 lg:mx-0 lg:grid lg:grid-cols-5 lg:items-stretch lg:overflow-visible lg:px-0 lg:pb-0">
         {cards.map(c => (
-          <Card key={c.label} className={c.split ? "col-span-2 lg:col-span-1" : undefined}>
+          <Card key={c.label} className="w-[68%] shrink-0 snap-start sm:w-[42%] md:w-[31%] lg:w-auto">
             <CardContent className="flex items-start justify-between gap-2 p-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.label}</p>
                 {/* Hierarquia vem do tamanho/tipografia de exibição, não do peso —
                     serifada só neste número (destaque do card), sans no resto. */}
-                <p className="mt-1 font-display text-2xl font-normal tabular-nums text-foreground">{c.value}</p>
+                <p className="mt-1 truncate font-display text-2xl font-normal tabular-nums text-foreground" title={c.value}>{c.value}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{c.hint}</p>
               </div>
               <c.icon className={`h-5 w-5 shrink-0 ${c.color}`} aria-hidden="true" />

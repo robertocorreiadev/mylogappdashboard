@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from 
 import type { Delivery, Transaction, DailyRecord } from "@/lib/db/schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { statusLabel, formatCurrency } from "@/lib/format"
+import { statusLabel, formatCurrency, formatCurrencyCompact, MONTHS as MONTH_NAMES } from "@/lib/format"
 import { recordGross, recordNet } from "@/lib/metrics"
 
 const STATUS_COLORS: Record<string, string> = {
@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
   entregue: "var(--chart-2)",
   cancelada: "var(--chart-3)",
 }
-const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
+const MONTHS = MONTH_NAMES.map((m) => m.slice(0, 3))
 
 export function OverviewPanel({
   deliveries, transactions, dailyRecords,
@@ -79,8 +79,8 @@ export function OverviewPanel({
               <BarChart data={boletaData}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} width={55}
-                  tickFormatter={v => `R$${(Number(v)/1000).toFixed(0)}k`} />
+                <YAxis tickLine={false} axisLine={false} width={72}
+                  tickFormatter={v => formatCurrencyCompact(Number(v))} />
                 <ChartTooltip content={<ChartTooltipContent formatter={v => formatCurrency(Number(v))} />} />
                 <Bar dataKey="bruto"    fill="var(--color-bruto)"    radius={4} />
                 <Bar dataKey="liquido"  fill="var(--color-liquido)"  radius={4} />
@@ -93,12 +93,12 @@ export function OverviewPanel({
 
       {/* Entregas por status */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Entregas por status (rastreio)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Pacotes por status (rastreio)</CardTitle></CardHeader>
         <CardContent>
           {statusData.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">Sem dados de entregas.</p>
+            <p className="py-12 text-center text-sm text-muted-foreground">Sem pacotes no rastreio.</p>
           ) : (
-            <ChartContainer config={{ count: { label: "Entregas" } }} className="mx-auto aspect-square max-h-[260px]">
+            <ChartContainer config={{ count: { label: "Pacotes" } }} className="mx-auto aspect-square max-h-[260px]">
               <PieChart>
                 <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
                 <Pie data={statusData} dataKey="count" nameKey="label" innerRadius={55} strokeWidth={2}>
@@ -133,8 +133,9 @@ export function OverviewPanel({
               <BarChart data={finData}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} width={40} />
-                <ChartTooltip content={<ChartTooltipContent />} />
+                <YAxis tickLine={false} axisLine={false} width={72}
+                  tickFormatter={v => formatCurrencyCompact(Number(v))} />
+                <ChartTooltip content={<ChartTooltipContent formatter={v => formatCurrency(Number(v))} />} />
                 <Bar dataKey="receita" fill="var(--color-receita)" radius={4} />
                 <Bar dataKey="despesa" fill="var(--color-despesa)" radius={4} />
               </BarChart>

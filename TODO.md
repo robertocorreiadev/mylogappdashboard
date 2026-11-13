@@ -474,6 +474,37 @@ Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheer
       ícone do cartão "Fat. bruto" sai do cartão com valor longo, e a lista de
       abas (`w-fit`) estoura. Já existia antes da Fase 2.
 
+## Redesign de layout — Fase 3: telas do entregador (2026-11-13)
+- [x] Filtro de período único na página (`PeriodFilter`, `lib/period.ts`):
+      cartões, Boletas, Financeiro e Visão geral. Rastreio sem filtro.
+- [x] Cartões do topo: faixa com rolagem lateral abaixo do `lg`; ícone não
+      sai do cartão; "Pacotes no rastreio"; saldo com receitas e despesas
+      na dica (a faixa repetida do Financeiro saiu). Fim dos 2 px de rolagem
+      lateral em 375 px (conferido num iframe de 375 px: 358 = 358).
+- [x] Boleta: form `@container` (data inteira no modal), `MoneyInput` /
+      `CountInput` (vírgula e teclado numérico), valor por entrega = o da
+      última boleta, aviso antes de substituir uma data, data travada na
+      edição, form limpo + toast depois de salvar.
+- [x] Histórico: cartões por dia no celular, tabela do `sm` para cima,
+      resumo anual logo depois do ano, "Com entregas"/"Sem entregas",
+      mensagens de vazio com filtro, coluna Ações some no só leitura.
+- [x] Rastreio = "Pacotes": busca, chips de status, edição do pacote
+      (`updateDelivery` + `adminUpdateDelivery` + `updateDeliveryById`),
+      status controlado com reversão na falha.
+- [x] Visão geral: eixo em moeda compacta (`formatCurrencyCompact`), tooltip
+      em R$ no financeiro, meses de `lib/format`.
+- [x] Testes: `lib/ui-helpers.test.ts` (18). Total 128/128.
+- [x] Smoke test no Chrome do usuário, sem gravar: filtro Novembro/2026
+      (cartões 399 entregas / R$ 798,00, sem resumo anual), aviso "Já existe
+      boleta em 12/11/2026" com as server actions bloqueadas no navegador
+      (0 chamadas), vírgula nas despesas, edição com data travada, celular
+      (form em 1 coluna, cartões do histórico, barra inferior), Financeiro,
+      Visão geral.
+- [ ] Não testado no navegador: salvar de verdade (grava no banco de
+      produção), edição e status de pacote (não há pacotes cadastrados).
+- [ ] Limite aceito: digitar "1.234,56" tecla a tecla vira 1,23 (o primeiro
+      separador é o decimal); colado de uma vez fica 1234,56.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

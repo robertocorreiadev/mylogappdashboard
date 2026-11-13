@@ -17,7 +17,7 @@ import { memberships, users, organizations, auditLogs } from "@/lib/db/schema"
 import { requireAdmin } from "@/app/actions/auth"
 import {
   dailyRecordsForUserAllPanels, findDailyRecord, insertDailyRecord, updateDailyRecordById, deleteDailyRecordById,
-  deliveriesForUserAllPanels, findDeliveryById, insertDelivery, updateDeliveryStatusById, deleteDeliveryById,
+  deliveriesForUserAllPanels, findDeliveryById, insertDelivery, updateDeliveryById, updateDeliveryStatusById, deleteDeliveryById,
   transactionsForUserAllPanels, findTransactionById, insertTransaction, updateTransactionById, deleteTransactionById,
 } from "@/lib/db/scopes"
 import { recordAudit } from "@/lib/audit"
@@ -133,6 +133,26 @@ export async function adminCreateDelivery(organizationId: number, targetUserId: 
   await recordAudit({
     organizationId, actorUserId: admin.id, entityType: "delivery", entityId: created.id,
     action: "create", before: null, after: created,
+  })
+  revalidatePath(`/gestor/entregadores/${targetUserId}`)
+  return { success: true }
+}
+
+export async function adminUpdateDelivery(organizationId: number, targetUserId: number, formData: FormData) {
+  const admin = await requireAdmin()
+  const parsedId = parseRecordId(formData.get("id")?.toString() ?? "")
+  if (!parsedId.ok) return { error: "Pacote inválido." }
+  const parsed = parseDeliveryForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const id = parsedId.value
+  const { trackingCode, recipient, address, city, status, value, deadline } = parsed.value
+
+  const before = await findDeliveryById({ organizationId, userId: targetUserId, id })
+  const after = await updateDeliveryById({ organizationId, userId: targetUserId, id }, { trackingCode, recipient, address, city, status, value, deadline })
+  if (!after) return { error: "Pacote não encontrado." }
+  await recordAudit({
+    organizationId, actorUserId: admin.id, entityType: "delivery", entityId: id,
+    action: "update", before: before ?? null, after,
   })
   revalidatePath(`/gestor/entregadores/${targetUserId}`)
   return { success: true }

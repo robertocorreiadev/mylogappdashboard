@@ -132,6 +132,20 @@ export async function updateDeliveryStatusById({ organizationId, userId, id }: S
   return row
 }
 
+export async function updateDeliveryById(
+  { organizationId, userId, id }: Scope & { id: number },
+  values: Partial<typeof deliveries.$inferInsert>,
+) {
+  const [row] = await db.update(deliveries).set(values)
+    .where(and(
+      eq(deliveries.id, id),
+      eq(deliveries.organizationId, organizationId),
+      eq(deliveries.userId, userId),
+    ))
+    .returning()
+  return row
+}
+
 export async function deleteDeliveryById({ organizationId, userId, id }: Scope & { id: number }) {
   const [row] = await db.delete(deliveries)
     .where(and(

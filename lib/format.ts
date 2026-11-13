@@ -6,6 +6,16 @@ export function formatCurrency(value: number | string) {
   }).format(isNaN(n) ? 0 : n)
 }
 
+/** Moeda curta para eixo de gráfico: "R$ 1,2 mil", "R$ 350". */
+export function formatCurrencyCompact(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 export function formatDate(value: string | Date | null) {
   if (!value) return "—"
   const d = typeof value === "string" ? new Date(value + "T00:00:00") : value

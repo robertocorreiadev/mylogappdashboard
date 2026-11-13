@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { requireEntregador } from "@/app/actions/auth"
-import { deliveriesForUser, findDeliveryById, insertDelivery, updateDeliveryStatusById, deleteDeliveryById } from "@/lib/db/scopes"
+import { deliveriesForUser, findDeliveryById, insertDelivery, updateDeliveryById, updateDeliveryStatusById, deleteDeliveryById } from "@/lib/db/scopes"
 import { recordAudit } from "@/lib/audit"
-import { isDeliveryStatus, parseDeliveryForm } from "@/lib/forms"
+import { isDeliveryStatus, parseDeliveryForm, parseRecordId } from "@/lib/forms"
 
 export async function getDeliveries(panel: string = "jadlog") {
   const { organizationId, user } = await requireEntregador()
@@ -20,6 +20,28 @@ export async function createDelivery(formData: FormData) {
   await recordAudit({
     organizationId, actorUserId: user.id, entityType: "delivery", entityId: created.id,
     action: "create", before: null, after: created,
+  })
+  revalidatePath("/dashboard")
+  revalidatePath("/panel2")
+  return { success: true }
+}
+
+// Edição completa do pacote (o painel não muda: o pacote fica onde nasceu).
+export async function updateDelivery(formData: FormData) {
+  const { organizationId, user } = await requireEntregador()
+  const parsedId = parseRecordId(formData.get("id")?.toString() ?? "")
+  if (!parsedId.ok) return { error: "Pacote inválido." }
+  const parsed = parseDeliveryForm(formData)
+  if (!parsed.ok) return { error: parsed.error }
+  const id = parsedId.value
+  const { trackingCode, recipient, address, city, status, value, deadline } = parsed.value
+
+  const before = await findDeliveryById({ organizationId, userId: user.id, id })
+  const after = await updateDeliveryById({ organizationId, userId: user.id, id }, { trackingCode, recipient, address, city, status, value, deadline })
+  if (!after) return { error: "Pacote não encontrado." }
+  await recordAudit({
+    organizationId, actorUserId: user.id, entityType: "delivery", entityId: id,
+    action: "update", before: before ?? null, after,
   })
   revalidatePath("/dashboard")
   revalidatePath("/panel2")

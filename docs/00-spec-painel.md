@@ -33,7 +33,7 @@
 
 Os dados de um painel nunca se misturam com os do outro.
 
-1.3 Cada painel tem 4 abas: **Boleta Diária**, **Rastreio** (pacotes), **Financeiro** (receitas e despesas avulsas) e **Visão Geral** (gráficos).
+1.3 Cada painel tem 4 abas: **Boletas** (o registro do dia), **Rastreio** (pacotes), **Financeiro** (receitas e despesas avulsas) e **Visão geral** (gráficos).
 
 1.4 Camada de empresas (multi-tenant):
 - uma **organização** tem membros com o papel `gestor` ou `entregador`;
@@ -534,6 +534,7 @@ Regras comuns a todas:
   - `deadline` (`"Prazo"`; vazio → `null`).
 
   Grava auditoria `create`. Devolve `{ success: true }`.
+- `updateDelivery(fd)` → edição completa do pacote: `id` do form (`parseRecordId`; inválido → `{ error: "Pacote inválido." }`) e os mesmos campos e regras do `createDelivery` (`parseDeliveryForm`). O painel **não** muda (o pacote fica onde nasceu). Atualiza por `updateDeliveryById` (`lib/db/scopes.ts`, mesmo escopo organização + usuário); sem linha → `{ error: "Pacote não encontrado." }`. Grava auditoria `update` com antes e depois. Devolve `{ success: true }`.
 - `updateDeliveryStatus(id, status)` → status fora de `STATUS_OPTIONS` → não faz nada (chamada forjada; a UI só oferece a lista). Senão lê o "antes", atualiza só o `status` e grava auditoria `update`.
 - `deleteDelivery(id)` → exclui e grava auditoria `delete`.
 
@@ -581,7 +582,7 @@ Regras comuns a todas:
 - `adminGetTargetMemberData(targetUserId)`:
   - procura a membership `entregador` ativa do alvo em **qualquer** organização, com JOIN de `memberships`, `users` e `organizations`;
   - devolve `{ member, organizationId, orgName (nulo vira "—"), panels }`, ou `null`.
-- `adminSaveDailyRecord`, `adminDeleteDailyRecord`, `adminCreateDelivery`, `adminUpdateDeliveryStatus`, `adminDeleteDelivery`, `adminCreateTransaction`, `adminUpdateTransaction`, `adminDeleteTransaction`:
+- `adminSaveDailyRecord`, `adminDeleteDailyRecord`, `adminCreateDelivery`, `adminUpdateDelivery`, `adminUpdateDeliveryStatus`, `adminDeleteDelivery`, `adminCreateTransaction`, `adminUpdateTransaction`, `adminDeleteTransaction`:
   - recebem `(organizationId, targetUserId, ...)` antes dos argumentos das ações normais;
   - repetem as mesmas regras e a mesma validação (`lib/forms.ts`), mas gravam a auditoria com `actorUserId = admin`;
   - chamam `revalidatePath("/gestor/entregadores/{targetUserId}")`;
@@ -767,92 +768,54 @@ Nome do usuário logado, tema, configurações e sair ficam no menu de conta (§
 
 ### 11.4 Abas do painel — `DashboardTabs` (`components/dashboard-tabs.tsx`)
 
-- Props: `deliveries`, `transactions`, `dailyRecords`, `panel`, `readOnly`, `actions?: PanelActions` (as 8 ações substituíveis do modo admin).
-- Estado: aba ativa (padrão `"daily"`), mais ano e mês da boleta e ano e mês do financeiro. Os filtros são independentes.
-- Abas, nesta ordem: `"Boleta Diária"`, `"Rastreio"`, `"Financeiro"`, `"Visão Geral"`.
-- Os cartões do topo (`StatsOverview`):
-  - na aba Boleta, usam as boletas filtradas pelo período dela;
-  - na aba Financeiro, usam os lançamentos filtrados pelo período dela;
-  - nas outras abas, usam tudo.
-  - O rastreio nunca é filtrado.
-  - O filtro dos cartões é memoizado (`useMemo` com aba, dados, ano e mês): não refaz a conta quando nada disso muda.
-- `periodLabel`:
-  - sem filtro → nada;
-  - ano + mês → `"{Aba} — {Mês}/{Ano}"`;
-  - só ano → `"{Aba} — {Ano}"`;
-  - só mês → `"{Aba} — {Mês} (todos os anos)"`.
-  - `{Aba}` vale `"Boleta Diária"` ou `"Financeiro"`.
+- Props: `deliveries`, `transactions`, `dailyRecords`, `panel`, `readOnly`, `actions?: PanelActions` (as 9 ações substituíveis do modo admin: boleta salvar/excluir; pacote criar/editar/status/excluir; lançamento criar/editar/excluir).
+- **Filtro de período único** (`components/period-filter.tsx`), acima dos cartões: ícone `CalendarRange`, rótulo `"Período"` (só leitor de tela abaixo do `sm`), `<select aria-label="Ano">` (`"Todos os anos"` + anos com boleta **ou** lançamento, do mais novo ao mais velho) e `<select aria-label="Mês">` (`"Todos os meses"` + meses que existem no ano escolhido, em ordem). Trocar o ano tira o mês se ele não existir no ano novo. Com filtro ativo aparece o botão `"Limpar"`. Opções: `periodOptions` (`lib/period.ts`).
+- O filtro vale para: os cartões do topo, a aba Boletas, a aba Financeiro e a Visão geral. O Rastreio **não** é filtrado (pacote não tem data de boleta). Os filtros memoizados (`useMemo`) usam `filterByPeriod`.
+- Abas, nesta ordem, com ícone: `"Boletas"` (`ClipboardList`), `"Rastreio"` (`Package`), `"Financeiro"` (`Wallet`), `"Visão geral"` (`BarChart3`). Abaixo do `sm` a lista ocupa a largura e rola na lateral (não estoura a página).
 
-### 11.5 Boleta Diária — `DailyRecordsPanel` (`components/daily-records-panel.tsx`)
+### 11.5 Boletas — `DailyRecordsPanel` (`components/daily-records-panel.tsx`)
 
-**Formulário fixo no topo** (escondido em `readOnly`). Cabeçalho `"Registrar entrega do dia"`. Campos, nesta ordem:
+Props: `records` (do período), `allRecords` (todas), `filtered`, `showAnnual` (falso com mês escolhido), `panel`, `readOnly`, `onSave`, `onDelete`.
 
-| Rótulo | Ícone | Input | Regra |
+**Registrar boleta do dia** (escondido em `readOnly`), `<h2>` `"Registrar boleta do dia"`. O form usa `@container`: 1 coluna, 2 a partir de `@md` e 5 a partir de `@3xl` (largura do form, não da tela; no modal de edição ficam 2 colunas e a data não corta).
+
+| Rótulo | Ícone | Campo | Regra |
 |---|---|---|---|
-| `"Valor por entrega (R$)"` + dica `"← altere se o valor mudar"` | `Settings` | texto, `inputMode="decimal"`, `pattern="[0-9]*[.,]?[0-9]*"` | padrão `"3.50"` (ou o valor gravado com 2 casas); vírgula vira ponto ao digitar; obrigatório |
-| `"Data"` | `Calendar` | `type="date"`, obrigatório | padrão hoje (`localDateISO()`) ou a data gravada |
-| `"Entregas realizadas"` | `CheckCircle2` | `number`, `min 0`, `step 1`, `placeholder "0"` | — |
-| `"Agendadas (sem sucesso)"` | `Clock` | `number`, `min 0` | padrão 0 |
-| `"Com ocorrência"` | `AlertTriangle` | `number`, `min 0` | padrão 0 |
-| `"Despesas do dia (R$)"` | `Receipt` | `number`, `step 0.01`, `min 0`, `placeholder "0,00"` | — |
+| `"Valor por entrega (R$)"` + `"Altere só se o valor mudar."` | `Settings` | `MoneyInput` | padrão = valor da boleta de data mais recente (`lastValuePerDelivery`, `lib/boleta.ts`), ou `"3.50"` sem boletas |
+| `"Data"` | `Calendar` (`Lock` na edição) | `type="date"` | padrão hoje (`localDateISO()`); na edição fica só leitura, com `"Para mudar a data, exclua e registre de novo."` |
+| `"Entregas realizadas"` | `CheckCircle2` | `CountInput` | — |
+| `"Agendadas (sem sucesso)"` | `Clock` | `CountInput` | — |
+| `"Com ocorrência"` | `AlertTriangle` | `CountInput` | — |
+| `"Despesas do dia (R$)"` | `Receipt` | `MoneyInput`, `placeholder "0,00"` | — |
 
-- Grade: 1 coluna no celular, 2 a partir de `sm` e 5 a partir de `lg`.
-- **Indicadores ao vivo** (antes de salvar), em 3 colunas:
-  - `"Faturamento bruto"`;
-  - `"Despesas"`, mostrado como `"− R$ x"`;
-  - `"Faturamento líquido"`: verde (`--chart-2`) se ≥ 0, vermelho se < 0.
-- Botão `"Salvar"` (`"Salvando..."`). O erro do servidor aparece numa caixa vermelha.
+- `MoneyInput` / `CountInput` (`components/money-input.tsx`): texto com `inputMode="decimal"` / `"numeric"`. O dinheiro aceita `"12,50"` e `"1.234,56"` colado (com ponto e vírgula juntos, o ponto é milhar); digitado tecla a tecla, o primeiro separador vira o decimal. Aparece com vírgula; o servidor (`parseMoney`) troca a vírgula por ponto. Limpeza: `sanitizeDecimalInput` (`lib/money.ts`, máximo 2 casas). Contagem: só dígitos, até 6.
+- **Indicadores ao vivo** (`aria-live`), 3 colunas: `"Bruto"`, `"Despesas"` (`"− R$ x"`) e `"Líquido"` (verde ≥ 0, vermelho < 0).
+- Botão `"Salvar boleta"` (edição: `"Salvar alterações"`; `"Salvando..."`). Erro do servidor em `FormError`.
+- **Data que já tem boleta** (registro, não edição): antes de gravar abre o modal `"Já existe boleta em {DD/MM/AAAA}"` / `"Salvar agora substitui os números desse dia."`, botões `"Cancelar"` (foco) e `"Substituir"`.
+- Depois de salvar: toast `"Boleta de DD/MM salva"`; o form de registro volta limpo (remonta com `key`), com hoje e o valor por entrega da última boleta.
 
 **Histórico:**
-- Título `"Histórico"`, ou `"Histórico {ano}"` com ano filtrado.
-- Botão `"Exportar CSV"` quando há boletas.
-- Três `<select>` nativos:
-  - ano: `"Todos os anos"` + anos que têm boleta, do mais novo para o mais velho;
-  - mês: `"Todos os meses"` + meses com boleta no ano escolhido, em ordem crescente;
-  - situação: `"Todos"` | `"Registrados"` (entregas > 0) | `"Pendentes"` (boleta com 0 entregas).
-- Sem boletas: ícone `ClipboardList`, `"Nenhuma boleta registrada"` e, fora do modo só leitura, `"Preencha o formulário acima para começar."`.
-
-**Tabela:**
-- Colunas: `"Data"`, `"Realizadas"`, `"Agendadas"`, `"Ocorrências"`, `"R$/unid."`, `"Fat. Bruto"`, `"Despesas"`, `"Fat. Líquido"`, `"Ações"`.
-- Agrupamento: ano decrescente → mês decrescente → datas decrescentes.
-- Cada mês abre com a linha `"{Mês} {Ano}"`.
-- Linha de boleta:
-  - data `DD/MM/AAAA` + dia da semana `Dom Seg Ter Qua Qui Sex Sáb` (sábado e domingo em `primary`);
-  - `R$/unid.` como `R$ 3,50`;
-  - despesas como `"− R$ x"`;
-  - líquido verde ou vermelho;
-  - ações (fora de `readOnly`): editar abre o modal `"Editar boleta — {DD/MM/AAAA}"` / `"Altere os dados do dia e salve."` com o mesmo formulário; excluir pede confirmação (`ConfirmDeleteButton`, item `"a boleta de {DD/MM/AAAA}"`).
-- **Resumo mensal**:
-  - fica no **fim** de cada bloco de mês. Como a ordem é decrescente, fica abaixo do dia **mais antigo** **[DECIDIR Q2]**;
-  - texto `"↳ Resumo {Mês} {Ano}"`;
-  - campos: `"{n} dias · {entregas} entregas"`, `"Bruto:"`, `"Despesas:"` (vermelho), `"Líquido:"`, `"Média/dia:"` e, à direita, `"▲ Positivo"` ou `"▼ Negativo"` com ícone de tendência.
-- **Resumo anual**:
-  - `"▶ Resumo Anual {Ano}"`, com os mesmos campos e destaque mais forte (borda `primary/50`);
-  - uma linha por ano exibido, **todas juntas no fim da tabela**.
-- Os resumos usam **todas** as boletas do mês ou ano. O filtro de situação não muda os totais.
-- **CSV** `boletas-{panel}-{AAAA-MM-DD}.csv`:
-  - linhas = período de ano e mês, ignorando a situação;
-  - colunas `Data;Entregas Realizadas;Agendadas;Ocorrências;Valor por Entrega;Faturamento Bruto;Despesas;Faturamento Líquido`;
-  - números com 2 casas e ponto decimal.
-- Tudo se atualiza depois de salvar, por `revalidatePath`, sem recarregar a página.
+- `<h2>` `"Histórico"`, `<select aria-label="Situação">`: `"Todas"` | `"Com entregas"` (entregas > 0) | `"Sem entregas"` (boleta com 0 entregas) (`filterByDelivered`, `lib/boleta.ts`). Botão `"Exportar CSV"` quando há boletas no período.
+- Vazios: sem nenhuma boleta → ícone `ClipboardList`, `"Nenhuma boleta registrada"` + `"Preencha o formulário acima para começar."` (fora do só leitura); com boletas mas nada à vista → `"Nenhuma boleta no período"` (filtro de período sem boletas) ou `"Nenhuma boleta com essa situação"`, + `"Mude o período ou a situação para ver outras boletas."`.
+- Agrupamento: ano decrescente → mês decrescente → dias decrescentes. Cada mês termina com o **resumo mensal** e cada ano com o **resumo anual logo depois dos meses dele** (`showAnnual`). Os resumos usam todas as boletas do mês/ano no período; a situação só esconde linhas.
+- **Abaixo do `sm`: cartões por dia** — data `DD/MM/AAAA` + dia da semana + selo `"fim de semana"` (sábado e domingo); `"{n} entregas · {n} agendadas · {n} ocorr."`; líquido (cor) e `"bruto R$ x"`; fora do só leitura, `"Editar"` (botão com texto) e excluir. Resumos em caixas com `Bruto`, `Despesas`, `Líquido`, `Média/dia`.
+- **A partir do `sm`: tabela** — colunas `"Data"`, `"Realizadas"`, `"Agendadas"`, `"Ocorrências"`, `"R$/unid."`, `"Fat. Bruto"`, `"Despesas"`, `"Fat. Líquido"` e `"Ações"` (a coluna some no só leitura). Fim de semana: dia em `primary` + `"(fim de semana)"` para leitor de tela. Resumos: `"↳ Resumo {Mês} {Ano}"` e `"▶ Resumo anual {Ano}"` com `"{n} dias · {entregas} entregas"`, `"Bruto:"`, `"Despesas:"`, `"Líquido:"`, `"Média/dia:"` e `"▲ Positivo"` / `"▼ Negativo"`.
+- Editar abre `"Editar boleta — {DD/MM/AAAA}"` / `"Altere os números do dia e salve."` (`sm:max-w-2xl`). Botões com contexto: `aria-label "Editar boleta de {data}"`; excluir pede confirmação (`"a boleta de {DD/MM/AAAA}"`).
+- **CSV** `boletas-{panel}-{AAAA-MM-DD}.csv`: as boletas do período (ignora a situação); colunas `Data;Entregas Realizadas;Agendadas;Ocorrências;Valor por Entrega;Faturamento Bruto;Despesas;Faturamento Líquido`, números com 2 casas e ponto.
 
 ### 11.6 Cartões do topo — `StatsOverview` (`components/stats-overview.tsx`)
 
-- `periodLabel` presente → `"Exibindo período: {label}"`.
-- Grade: 2 colunas no celular e 5 a partir de `lg`. O cartão de líquido ocupa 2 colunas no celular (`col-span-2 lg:col-span-1`).
-- Cada cartão mostra:
-  - o rótulo em `text-xs uppercase tracking-wide`, cor muted;
-  - o **valor** em `font-display text-2xl font-normal tabular-nums` (fonte serifada, §12). A hierarquia vem do tamanho e da fonte, não do peso;
-  - a dica em `text-xs`, cor muted;
-  - o ícone à direita, `h-5 w-5`.
+- `periodLabel` (opcional) → `"Período: {label}"`. O `DashboardTabs` não passa (o filtro está logo acima).
+- **Abaixo do `lg`: faixa com rolagem lateral** (`snap-x`), cartões de 68% da largura no celular (42% no `sm`, 31% no `md`), alinhados no topo (cada um com a própria altura). A faixa rola sozinha: a página não ganha rolagem lateral. **`lg`+: grade de 5.**
+- Cada cartão: rótulo `text-xs uppercase`; **valor** `font-display text-2xl tabular-nums` (corta com `…` e mostra inteiro no `title` se não couber); dica `text-xs`; ícone `h-5 w-5` (o bloco de texto é `min-w-0`, então o ícone não sai do cartão).
 
 | Rótulo | Valor | Dica | Ícone / cor |
 |---|---|---|---|
 | `"Entregas realizadas"` | Σ entregas | `"{n} dias trabalhados"` | `Truck` / primary |
 | `"Fat. bruto acumulado"` | bruto | `"Despesas: R$ x"` | `TrendingUp` / chart-2 |
 | `"Fat. líquido acumulado"` | líquido | `"Média/dia: R$ x"` | `Wallet` / verde ou vermelho |
-| `"Rastreio (total)"` | nº de entregas | `"{n} em aberto"` | `Package` / chart-4 |
-| `"Saldo financeiro"` | saldo | `"Positivo"` ou `"Negativo"` | `TrendingUp` ou `TrendingDown` / verde ou vermelho |
+| `"Pacotes no rastreio"` | nº de pacotes | `"{n} em aberto"` | `Package` / chart-4 |
+| `"Saldo financeiro"` | saldo | `"Receitas R$ x · Despesas R$ y"` | `TrendingUp` ou `TrendingDown` / verde ou vermelho |
 
 **Faixa de quinzenas** (dentro do cartão de líquido, só se há boleta; vale para o entregador, o `/gestor` e o drill-down):
 - título `"Quinzenas · {Mês abreviado em 3 letras}/{Ano}"`;
@@ -865,60 +828,41 @@ Nome do usuário logado, tema, configurações e sair ficam no menu de conta (§
 
 ### 11.7 Rastreio e Financeiro
 
+Termos: **boleta** = o registro do dia (entregas feitas e dinheiro); **pacote** = o item acompanhado no Rastreio. A tabela do banco continua `deliveries`.
+
 **`DeliveriesPanel`** (`components/deliveries-panel.tsx`):
-- Título `"Entregas"`.
-- Botões `"Exportar CSV"` (quando há entregas) e `"Nova entrega"` (fora de `readOnly`).
-- Modal `"Nova entrega"` / `"Cadastre um novo pacote para acompanhamento."`. Campos:
+- Título `"Pacotes"`. Botões `"Exportar CSV"` (quando há pacotes) e `"Novo pacote"` (fora de `readOnly`).
+- Com pacotes: busca (`type="search"`, `aria-label "Buscar pacote"`, `"Buscar código, destinatário ou cidade"`; sem maiúsculas nem acentos) e chips de status (`"Todos"` + os 4 status; `aria-pressed`) — `filterPackages` (`lib/package-filter.ts`). Nada encontrado → `"Nenhum pacote encontrado com essa busca."`.
+- Modal `"Novo pacote"` / `"Cadastre um pacote para acompanhar a entrega."`; editar (lápis, `aria-label "Editar pacote {código}"`) → `"Editar pacote — {código}"` / `"Altere os dados do pacote e salve."`. Mesmo form (`sm:max-w-lg`):
   - `"Código de rastreio"` (`"JL123456789BR"`, obrigatório);
   - `"Destinatário"` (`"Nome do cliente"`, obrigatório);
-  - `"Cidade"` (`"São Paulo"`);
-  - `"Valor (R$)"`;
+  - `"Cidade"` (`"São Paulo"`) e `"Valor (R$)"` (`MoneyInput`), lado a lado do `sm` para cima;
   - `"Endereço"` (`"Rua, número, bairro"`);
-  - `"Prazo"` (date);
-  - `"Status"` (select, padrão Pendente).
+  - `"Prazo"` (date) e `"Status"` (select, padrão Pendente).
 
-  Botão `"Salvar entrega"` (`"Salvando..."`).
-- Tabela: `"Rastreio"`, `"Destinatário"`, `"Cidade"`, `"Prazo"`, `"Valor"`, `"Status"`, `"Ações"`.
-- O status é um Select com badge colorido:
-  - pendente: cinza;
-  - em trânsito: chart-4;
-  - entregue: chart-2;
-  - cancelada: vermelho.
-  - Em `readOnly`, só o badge aparece.
-- Excluir pede confirmação (`ConfirmDeleteButton`, item `"a entrega {código}"`).
-- Vazio: `"Nenhuma entrega cadastrada"` + `Clique em "Nova entrega" para começar.` (este texto e os outros textos com aspas internas aparecem sem as aspas externas).
+  Botão `"Salvar pacote"` / `"Salvar alterações"` (`"Salvando..."`). Toast `"Pacote cadastrado"` / `"Pacote atualizado"`.
+- Tabela: `"Rastreio"`, `"Destinatário"`, `"Cidade"`, `"Prazo"`, `"Valor"`, `"Status"` e `"Ações"` (só fora de `readOnly`).
+- Status: Select com badge colorido (pendente cinza, em trânsito chart-4, entregue chart-2, cancelada vermelho), **controlado**: muda na hora; se a action falhar, volta ao anterior e mostra o toast de erro. Em `readOnly`, só o badge.
+- Excluir pede confirmação (`"o pacote {código}"`).
+- Vazio: `"Nenhum pacote cadastrado"` + `Clique em "Novo pacote" para começar.`.
 - CSV `entregas-{panel}-{data}.csv`: `Código de Rastreio;Destinatário;Cidade;Endereço;Prazo;Valor;Status`. Exporta tudo, sem filtro.
 
 **`FinancePanel`** (`components/finance-panel.tsx`):
-- Topo: `"Total receitas"` (verde), `"Total despesas"` (vermelho) e `"Saldo"`, todos do período filtrado.
-- Título `"Lançamentos financeiros"` + selects `"Todos os anos"` e `"Todos os meses"` (mesma lógica da boleta).
-- Botões `"Exportar CSV"` e `"Novo lançamento"`.
-- Modal `"Novo lançamento"` / `"Registre uma receita ou despesa."`, ou `"Editar lançamento"` / `"Altere os dados e salve."`. Campos:
-  - `"Tipo"` (Receita | Despesa);
-  - `"Valor (R$)"` (obrigatório);
-  - `"Descrição"` (`"Ex: Combustível"`, obrigatória);
-  - `"Categoria"` (`"Frete, Combustível..."`);
-  - `"Data"` (padrão hoje).
-
-  Botão `"Salvar lançamento"` ou `"Salvar alterações"`.
-- Tabela: `"Data"`, `"Descrição"`, `"Categoria"`, `"Tipo"`, `"Valor"` (`+R$` verde ou `−R$` vermelho), `"Ações"`. Excluir pede confirmação (`ConfirmDeleteButton`, item `"o lançamento \"{descrição}\""`).
+- Recebe os lançamentos **do período da página** e `hasAny` (existe algum lançamento fora do período). Não tem mais filtro próprio nem a faixa Receitas/Despesas/Saldo (o cartão `"Saldo financeiro"` traz receitas e despesas na dica).
+- Título `"Lançamentos financeiros"`. Botões `"Exportar CSV"` (período) e `"Novo lançamento"`.
+- Modal `"Novo lançamento"` / `"Registre uma receita ou despesa."`, ou `"Editar lançamento"` / `"Altere os dados e salve."` (`sm:max-w-md`). Campos: `"Tipo"` (Receita | Despesa); `"Valor (R$)"` (`MoneyInput`, obrigatório); `"Descrição"` (`"Ex: Combustível"`, obrigatória); `"Categoria"` (`"Frete, Combustível..."`); `"Data"` (padrão hoje). Botão `"Salvar lançamento"` ou `"Salvar alterações"`.
+- Tabela: `"Data"`, `"Descrição"`, `"Categoria"`, `"Tipo"`, `"Valor"` (`+R$` verde ou `−R$` vermelho) e `"Ações"` (só fora de `readOnly`; editar com `aria-label "Editar lançamento {descrição}"`). Excluir pede confirmação (`"o lançamento \"{descrição}\""`).
+- Vazio: `"Nenhum lançamento registrado"` (sem nenhum) ou `"Nenhum lançamento no período selecionado"`. Fora de `readOnly` vem também `Clique em "Novo lançamento" para começar.`.
+- CSV `financeiro-{panel}-{data}.csv`: `Data;Descrição;Categoria;Tipo;Valor`. Exporta o período.
 
 **`ConfirmDeleteButton`** (`components/confirm-delete-button.tsx`): lixeira que abre o modal `"Excluir {item}?"` / `"Essa ação não pode ser desfeita."`, botões `"Cancelar"` (foco inicial) e `"Excluir"` (`"Excluindo..."`). Não usa `window.confirm`.
-- Vazio: `"Nenhum lançamento registrado"` (sem nenhum lançamento) ou `"Nenhum lançamento no período selecionado"` (com filtro). Fora de `readOnly` vem também `Clique em "Novo lançamento" para começar.`.
-- CSV `financeiro-{panel}-{data}.csv`: `Data;Descrição;Categoria;Tipo;Valor`. Exporta o período filtrado.
 
-### 11.8 Visão Geral — `OverviewPanel` (Recharts + `ChartContainer` do shadcn)
+### 11.8 Visão geral — `OverviewPanel` (Recharts + `ChartContainer` do shadcn)
 
-1. `"Boletas mensais (bruto × líquido)"`:
-   - barras `bruto` (chart-1), `liquido` (chart-2) e `despesas` (chart-3) por mês `"{Mmm}/{AA}"`, em ordem cronológica;
-   - eixo Y em `R${milhares}k`;
-   - tooltip em BRL;
-   - vazio → `"Sem boletas registradas."`.
-2. `"Entregas por status (rastreio)"`:
-   - rosca com cores por status (pendente chart-5, em trânsito chart-4, entregue chart-2, cancelada chart-3);
-   - legenda `"{rótulo} ({n})"`;
-   - vazio → `"Sem dados de entregas."`.
-3. `"Receitas × Despesas (financeiro)"`: só aparece se há lançamento. Barras receita (chart-2) e despesa (chart-3) por mês, largura total.
+Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
+1. `"Boletas mensais (bruto × líquido)"`: barras `bruto` (chart-1), `liquido` (chart-2) e `despesas` (chart-3) por mês `"{Mmm}/{AA}"` (`MONTHS` de `lib/format.ts`, 3 letras), em ordem cronológica; eixo Y em moeda compacta (`formatCurrencyCompact`: `"R$ 750"`, `"R$ 1,5 mil"`); tooltip em BRL; vazio → `"Sem boletas registradas."`.
+2. `"Pacotes por status (rastreio)"`: rosca com cores por status (pendente chart-5, em trânsito chart-4, entregue chart-2, cancelada chart-3); legenda `"{rótulo} ({n})"`; vazio → `"Sem pacotes no rastreio."`.
+3. `"Receitas × Despesas (financeiro)"`: só aparece se há lançamento. Barras receita (chart-2) e despesa (chart-3) por mês, largura total; eixo Y compacto e tooltip em BRL.
 
 ### 11.9 Gestor
 
@@ -1090,7 +1034,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 **Toasts** (`sonner`, `toast.success` / `toast.error`), textos exatos:
 - boleta salva → `"Boleta de DD/MM salva"`;
 - excluir pelo `ConfirmDeleteButton` → `"Excluído"` + o item com inicial maiúscula (ex.: `"A boleta de 09/11/2026"`); se a action devolver `{ error }`, o erro aparece no modal e ele não fecha;
-- entrega → `"Entrega cadastrada"`; status → `"Status: {rótulo}"`, falha → `"Não foi possível mudar o status. Atualize a página e tente de novo."`;
+- pacote → `"Pacote cadastrado"` / `"Pacote atualizado"`; status (desfaz a troca na falha) → `"Status: {rótulo}"`, falha → `"Não foi possível mudar o status. Atualize a página e tente de novo."`;
 - lançamento → `"Lançamento salvo"` / `"Lançamento atualizado"`;
 - convite → `"Link de convite gerado"` (`"Copie e envie ao entregador."`), `"Convite revogado"`, `"Convites pendentes revogados"`;
 - auditoria → `"Entrada de auditoria excluída"`; erro da action → o texto do erro;
@@ -1098,11 +1042,12 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **110/110**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **128/128**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
+| `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos) |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |
 | `lib/rate-limit.test.ts` | não bloqueia antes de 5 falhas; bloqueia na 5ª; desbloqueia quando a janela vence (fake timers); `clearAttempts` desbloqueia; e-mail sem diferença de maiúsculas |
 | `lib/google-link.test.ts` | `isEmailAuthoritative`: @gmail.com verificado; Workspace com `hd` igual ao domínio; recusa conta comum de outro domínio, `hd` diferente, não verificado e `verified_email` que não é `true`. `decideGoogleLink`: usa a conta do `google_id`; liga pelo e-mail autoritativo; recusa e-mail não autoritativo (ligar e criar); recusa conta já ligada a outro `google_id`; cria conta nova |

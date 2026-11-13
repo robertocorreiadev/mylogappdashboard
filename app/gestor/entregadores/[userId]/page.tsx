@@ -4,7 +4,7 @@ import { getMemberDashboardData } from "@/app/actions/gestor"
 import {
   adminGetTargetMemberData,
   adminSaveDailyRecord, adminDeleteDailyRecord,
-  adminCreateDelivery, adminUpdateDeliveryStatus, adminDeleteDelivery,
+  adminCreateDelivery, adminUpdateDelivery, adminUpdateDeliveryStatus, adminDeleteDelivery,
   adminCreateTransaction, adminUpdateTransaction, adminDeleteTransaction,
 } from "@/app/actions/admin-override"
 import { AppShell } from "@/components/app-shell"
@@ -51,6 +51,7 @@ export default async function GestorEntregadorPage({
             onSaveDailyRecord: adminSaveDailyRecord.bind(null, data.organizationId, targetUserId),
             onDeleteDailyRecord: adminDeleteDailyRecord.bind(null, data.organizationId, targetUserId),
             onCreateDelivery: adminCreateDelivery.bind(null, data.organizationId, targetUserId),
+            onUpdateDelivery: adminUpdateDelivery.bind(null, data.organizationId, targetUserId),
             onUpdateDeliveryStatus: adminUpdateDeliveryStatus.bind(null, data.organizationId, targetUserId),
             onDeleteDelivery: adminDeleteDelivery.bind(null, data.organizationId, targetUserId),
             onCreateTransaction: adminCreateTransaction.bind(null, data.organizationId, targetUserId),

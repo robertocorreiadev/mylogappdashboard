@@ -52,7 +52,11 @@ em 2026-11-13. Detalhe no `TODO.md`.
 
 **Fase 2 (navegação fixa por papel) — feita (2026-11-13).**
 tsc limpo, 110/110, build ok, smoke test no navegador ok. Commit + push em
-2026-11-13. **Próximo:** Fase 3 (telas do entregador).
+2026-11-13. 
+
+**Fase 3 (telas do entregador) — feita (2026-11-13).**
+tsc limpo, 128/128, build ok, smoke test no navegador ok (sem gravar no
+banco). Commit + push em 2026-11-13. **Próximo:** Fase 4 (gestor, inclui D6).
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

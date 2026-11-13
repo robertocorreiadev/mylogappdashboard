@@ -1,10 +1,11 @@
 "use client"
 
 import { toast } from "sonner"
-import { useMemo, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import { Plus, Pencil, TrendingUp, TrendingDown, Wallet, Download } from "lucide-react"
 import type { Transaction } from "@/lib/db/schema"
 import { FormError } from "@/components/form-error"
+import { MoneyInput } from "@/components/money-input"
 import type { ActionResult } from "@/lib/forms"
 import { ConfirmDeleteButton } from "@/components/confirm-delete-button"
 import { localDateISO } from "@/lib/dates"
@@ -21,7 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency, formatDate, MONTHS } from "@/lib/format"
+import { formatCurrency, formatDate } from "@/lib/format"
 import { toCsv, downloadCsv } from "@/lib/csv"
 
 // D12: as actions devolvem { error } em vez de lançar; o form mostra o erro.
@@ -68,7 +69,7 @@ function TransactionForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="amount">Valor (R$)</Label>
-          <Input id="amount" name="amount" type="number" step="0.01" min="0" required placeholder="0,00"
+          <MoneyInput id="amount" name="amount" required placeholder="0,00"
             defaultValue={initial ? Number(initial.amount).toFixed(2) : ""} />
         </div>
       </div>
@@ -128,11 +129,11 @@ function TransactionRow({
         <TableCell className={`text-right font-mono font-semibold whitespace-nowrap ${isReceita ? "text-[var(--chart-2)]" : "text-destructive"}`}>
           {isReceita ? "+" : "−"}{formatCurrency(transaction.amount)}
         </TableCell>
+        {!readOnly && (
         <TableCell className="text-right">
-          {!readOnly && (
             <div className="flex items-center justify-end gap-1">
               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-                onClick={() => setEditOpen(true)} aria-label="Editar">
+                onClick={() => setEditOpen(true)} aria-label={`Editar lançamento ${transaction.description}`}>
                 <Pencil className="h-4 w-4" />
               </Button>
               <ConfirmDeleteButton
@@ -142,8 +143,8 @@ function TransactionRow({
                 iconClassName="h-4 w-4"
               />
             </div>
-          )}
         </TableCell>
+        )}
       </TableRow>
       {!readOnly && (
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -161,44 +162,21 @@ function TransactionRow({
 }
 
 export function FinancePanel({
-  transactions, panel = "jadlog", year, month, onYearChange, onMonthChange, readOnly = false,
+  transactions, hasAny = transactions.length > 0, panel = "jadlog", readOnly = false,
   onCreate = createTransaction, onUpdate = updateTransaction, onDelete = deleteTransaction,
 }: {
+  /** Lançamentos do período escolhido na página (filtro de DashboardTabs). */
   transactions: Transaction[]
+  /** Existe algum lançamento, fora do período? (muda a mensagem de vazio) */
+  hasAny?: boolean
   panel?: string
-  year: number | null
-  month: number | null
-  onYearChange: (year: number | null) => void
-  onMonthChange: (month: number | null) => void
   readOnly?: boolean
   onCreate?: CreateAction
   onUpdate?: UpdateAction
   onDelete?: DeleteAction
 }) {
   const [open, setOpen] = useState(false)
-
-  const allYears = useMemo(() =>
-    Array.from(new Set(transactions.map(t => new Date(t.date + "T00:00:00").getFullYear()))).sort((a, b) => b - a),
-    [transactions])
-
-  const monthsForSelect = useMemo(() => {
-    const source = year === null ? transactions : transactions.filter(t => new Date(t.date + "T00:00:00").getFullYear() === year)
-    return Array.from(new Set(source.map(t => new Date(t.date + "T00:00:00").getMonth()))).sort((a, b) => a - b)
-  }, [transactions, year])
-
-  const filtered = useMemo(() => {
-    if (year === null && month === null) return transactions
-    return transactions.filter(t => {
-      const d = new Date(t.date + "T00:00:00")
-      if (year !== null && d.getFullYear() !== year) return false
-      if (month !== null && d.getMonth() !== month) return false
-      return true
-    })
-  }, [transactions, year, month])
-
-  const receita = filtered.filter(t => t.type === "receita").reduce((s, t) => s + Number(t.amount), 0)
-  const despesa = filtered.filter(t => t.type === "despesa").reduce((s, t) => s + Number(t.amount), 0)
-  const saldo   = receita - despesa
+  const filtered = transactions
 
   function handleExport() {
     const csv = toCsv(filtered, [
@@ -214,43 +192,9 @@ export function FinancePanel({
   return (
     <Card>
       <CardContent className="p-4 md:p-6">
-        {/* Resumo rápido */}
-        <div className="mb-4 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-secondary/30">
-          <div className="px-4 py-3">
-            <p className="text-xs text-muted-foreground">Total receitas</p>
-            <p className="font-mono text-base font-bold text-[var(--chart-2)]">{formatCurrency(receita)}</p>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-xs text-muted-foreground">Total despesas</p>
-            <p className="font-mono text-base font-bold text-destructive">{formatCurrency(despesa)}</p>
-          </div>
-          <div className="px-4 py-3">
-            <p className="text-xs font-semibold text-foreground">Saldo</p>
-            <p className={`font-mono text-lg font-bold ${saldo >= 0 ? "text-[var(--chart-2)]" : "text-destructive"}`}>
-              {formatCurrency(saldo)}
-            </p>
-          </div>
-        </div>
-
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold text-foreground">Lançamentos financeiros</h2>
-            <select
-              value={year ?? ""}
-              onChange={e => onYearChange(e.target.value === "" ? null : Number(e.target.value))}
-              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
-            >
-              <option value="">Todos os anos</option>
-              {allYears.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <select
-              value={month ?? ""}
-              onChange={e => onMonthChange(e.target.value === "" ? null : Number(e.target.value))}
-              className="rounded-md border border-border bg-secondary px-3 py-1.5 text-sm text-foreground"
-            >
-              <option value="">Todos os meses</option>
-              {monthsForSelect.map(m => <option key={m} value={m}>{MONTHS[m]}</option>)}
-            </select>
           </div>
           <div className="flex items-center gap-2">
             {filtered.length > 0 && (
@@ -279,7 +223,7 @@ export function FinancePanel({
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
             <Wallet className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">
-              {transactions.length === 0 ? "Nenhum lançamento registrado" : "Nenhum lançamento no período selecionado"}
+              {!hasAny ? "Nenhum lançamento registrado" : "Nenhum lançamento no período selecionado"}
             </p>
             {!readOnly && <p className="text-xs text-muted-foreground">Clique em &quot;Novo lançamento&quot; para começar.</p>}
           </div>
@@ -293,7 +237,7 @@ export function FinancePanel({
                   <TableHead>Categoria</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  {!readOnly && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
