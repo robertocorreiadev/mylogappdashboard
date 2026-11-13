@@ -452,6 +452,28 @@ Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheer
 - [ ] Fase 3: no modal "Editar boleta", a data aparece cortada na grade de 5
       colunas.
 
+## Redesign de layout — Fase 2: navegação fixa por papel (2026-11-13)
+- [x] `lib/nav.ts` + teste (`navItems`, `isNavActive`, `drillDownBackHref`).
+- [x] `AppShell` (servidor) + `AppNav` (cliente): barra superior no desktop,
+      barra inferior no celular, menu de conta (configurações, tema, sair).
+      Todas as páginas logadas migradas; `next/link` nos links internos.
+- [x] `DashboardHeader` só com título, subtítulo, faixa de modo e ações.
+      Modal de configurações em `components/account-settings-dialog.tsx`.
+- [x] `/select` refeito: só cartões dos papéis do usuário, cartão Gestão do
+      admin, estado vazio sem papel (fim do laço silencioso).
+- [x] Drill-down: "Voltar" segue `?from=` (admin vindo do /gestor volta ao
+      /gestor). `<a><Button>` aninhado do `users-panel` corrigido.
+- [x] `dropdown-menu.tsx` escrito à mão: o CLI do shadcn gerava
+      `import { cn } from "cn"` e pedia um pacote npm `cn` (não instalado).
+- [x] Smoke test no Chrome do usuário: `/select`, barra e item ativo,
+      menu de conta, modal de configurações, tema pelo menu, drill-down pelos
+      dois caminhos com o "Voltar" certo, Painel 2 (barra azul), auditoria,
+      `/gestao`. Celular simulado num iframe de 375 px: barra inferior com os
+      5 itens e JADLOG ativo.
+- [ ] Fase 3: em 375 px há 2 px de rolagem horizontal no `/dashboard`: o
+      ícone do cartão "Fat. bruto" sai do cartão com valor longo, e a lista de
+      abas (`w-fit`) estoura. Já existia antes da Fase 2.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores

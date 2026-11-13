@@ -100,6 +100,7 @@ Os dados de um painel nunca se misturam com os do outro.
 Gerados pelo shadcn com o estilo `base-nova` sobre **Base UI** (`@base-ui/react`), não Radix: `badge`, `button`, `card`, `chart`, `dialog`, `input`, `label`, `select`, `table`, `tabs`. Para gerar de novo: `npx shadcn add badge button card chart dialog input label select table tabs`.
 
 Escritos à mão (sem o CLI):
+- `dropdown-menu.tsx`: `DropdownMenu`, `Trigger`, `Content` (portal + positioner, `align="end"`, `min-w-56`), `Group`, `Label`, `Item` (`variant` `default`/`destructive`), `Separator`, sobre `@base-ui/react/menu`. O `npx shadcn add dropdown-menu` de 2026-11-13 gerava `import { cn } from "cn"` e pedia um pacote npm `cn` estranho ao projeto: **não usar o CLI para este componente**.
 - `skeleton.tsx`: `div` com `animate-pulse rounded-md bg-muted` e `aria-hidden`.
 - `sonner.tsx`: `Toaster` do `sonner` que recebe o tema do layout (prop `theme`, não `next-themes`), `position="top-center"`, `closeButton`, `richColors` e as cores `--normal-bg/text/border` ligadas a `--popover`, `--popover-foreground` e `--border`.
 
@@ -473,17 +474,17 @@ Os parâmetros opcionais `knownUser` (em `auth.ts`) e `known?: MembershipContext
 | Rota | Arquivo | Acesso | Comportamento |
 |---|---|---|---|
 | `/` | `app/page.tsx` | público | Logado → `/select`. Senão mostra a tela de login (§11.1). |
-| `/select` | `app/select/page.tsx` | logado | Sem sessão → `/`. Só gestor (sem papel entregador) → `/gestor`. Senão mostra os cartões dos painéis (§11.2). |
+| `/select` | `app/select/page.tsx` | logado | `requireUser` falha → `/`. Só gestor (sem papel entregador e sem ser admin) → `/gestor`. Senão mostra a tela de início com os cartões dos papéis do usuário, ou o estado vazio (§11.2). |
 | `/dashboard` | `app/dashboard/page.tsx` | entregador | `requireUser` falha → `/`. Busca entregas, transações e boletas do painel `jadlog` em `Promise.all`. Se falhar (sem papel entregador) → `/select`. Renderiza `DashboardHeader(panelName "JADLOG", isAdmin)` + `DashboardTabs`. |
-| `/panel2` | `app/panel2/page.tsx` | entregador | Igual a `/dashboard`, com `PANEL = "panel2"`, `panelName "Painel 2"` e `<main data-panel="panel2">`, que ativa o tema azul. |
+| `/panel2` | `app/panel2/page.tsx` | entregador | Igual a `/dashboard`, com `PANEL = "panel2"`, `panelName "Painel 2"` e `AppShell panel="panel2"` (`<main data-panel="panel2">`), que ativa o tema azul. |
 | `/gestor` | `app/gestor/page.tsx` | gestor | Sem papel gestor → `/select`. Resolve `requireGestor()` **uma vez** e repassa às 3 consultas (§11.8). |
-| `/gestor/entregadores/[userId]` | `app/gestor/entregadores/[userId]/page.tsx` | gestor ou admin | 1. `resolveViewerMode()`. Se lançar (deslogado, ou logado sem ser admin nem gestor) → `redirect("/")`, e a `/` manda o logado para `/select`.<br>2. `params` é `Promise`. Id inválido → 404.<br>3. Admin → `adminGetTargetMemberData` + ações admin com `.bind(null, organizationId, targetUserId)`.<br>4. Gestor → `getMemberDashboardData(targetUserId, viewer)`, só leitura.<br>5. Alvo inexistente ou de fora → 404. |
+| `/gestor/entregadores/[userId]` | `app/gestor/entregadores/[userId]/page.tsx` | gestor ou admin | 1. `resolveViewerMode()`. Se lançar (deslogado, ou logado sem ser admin nem gestor) → `redirect("/")`, e a `/` manda o logado para `/select`.<br>2. `params` e `searchParams` são `Promise`. Id inválido → 404. `?from=gestor|gestao` define o "Voltar" (`drillDownBackHref`, `lib/nav.ts`): o gestor volta sempre ao `/gestor`; o admin volta ao `/gestor` com `from=gestor` e ao `/gestao` nos outros casos.<br>3. Admin → `adminGetTargetMemberData` + ações admin com `.bind(null, organizationId, targetUserId)`.<br>4. Gestor → `getMemberDashboardData(targetUserId, viewer)`, só leitura.<br>5. Alvo inexistente ou de fora → 404. |
 | `/gestor/auditoria` | `app/gestor/auditoria/page.tsx` | gestor ou admin | Admin → `getAuditLogGlobal()` (todas as organizações, sem precisar do papel gestor). Gestor → `getAuditLog(ctx)` (só a própria). Nenhum dos dois → `/select`. `canDelete = isAdminEmail`. |
-| `/gestao` | `app/gestao/page.tsx` | admin | Não é admin → `/select`. Header `panelName "Gestão de Usuários"`, botão "Nova organização" e tabela de usuários. |
+| `/gestao` | `app/gestao/page.tsx` | admin | Não é admin → `/select`. Título `"Gestão de Usuários"`, subtítulo `"Usuários e organizações de todo o sistema"`, botão "Nova organização" à direita do título e tabela de usuários. |
 | `/convite/[token]` | `app/convite/[token]/page.tsx` | público | §11.10. |
 | `/api/auth/google` e `/callback` | §6.5 | público | — |
 
-Todas as páginas de painel usam `<main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">`.
+Todas as páginas logadas (`/select`, `/dashboard`, `/panel2`, `/gestor`, drill-down, auditoria, `/gestao`) usam o `AppShell` (§11.3a): barra de navegação fixa + `<main className="mx-auto min-h-screen max-w-6xl px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-10">` (o `pb-28` deixa espaço para a barra inferior do celular). Links internos usam `next/link` (navegação sem recarregar a página); só os links para `/api/auth/google` continuam `<a>`.
 
 Estados de rota:
 - `loading.tsx` em `/dashboard`, `/panel2`, `/gestor`, `/gestor/entregadores/[userId]` (`PageSkeleton`, 5 cartões) e em `/gestor/auditoria` e `/gestao` (`PageSkeleton cards={0}`). `components/page-skeleton.tsx`: cabeçalho, cartões, abas e um bloco grande em `Skeleton`, com `aria-busy` e `"Carregando…"` para leitor de tela.
@@ -713,43 +714,56 @@ A tela **não** mostra nome de usuário.
 
 Botão `"Criar conta"` (`"Criando conta..."`).
 
-### 11.2 Seleção — `/select`
+### 11.2 Início — `/select`
 
-1. Logo `"MYLOG"`, `<h1>` `"Selecione o Painel"` e o texto `"Escolha qual transportadora deseja gerenciar"`.
-2. Cartões (links `<a>`):
+Dentro do `AppShell` (`className="max-w-xl"`).
+1. `<h1>` `"Olá, {primeiro nome}"`.
+2. Sem nenhum cartão (sem papel e sem ser admin): caixa com ícone `Inbox`, `"Você ainda não faz parte de uma operação"`, `"Peça ao seu gestor um link de convite. Ao abrir o link com esta conta, o acesso aparece aqui."` e botão `"Sair"` (form → `logout`). Isso acaba com o laço `/dashboard` → `/select` sem explicação.
+3. Com cartões: `"Escolha onde trabalhar"` e a lista de cartões (`next/link`), cada um com ícone num quadrado da cor do token, título na mesma cor, descrição e seta sempre visível (toque). Borda: o token a 40%. Foco visível.
 
-| Cartão | Ícone | Título | Subtítulo | Cor | Condição |
+| Cartão | Ícone | Título | Descrição | Cor | Condição |
 |---|---|---|---|---|---|
-| → `/dashboard` | `Package` | `"Painel JADLOG"` | `"Entregas e financeiro Jadlog"` | `primary` (índigo `#8d7bdb`) | sempre |
-| → `/panel2` | `LayoutDashboard` | `"Painel 2"` | `"Entregas e financeiro para outros contratos"` | `#4f9dff` | sempre |
-| → `/gestor` | `Users` | `"Painel do Gestor"` | `"Visão da sua organização"` | `var(--chart-2)` | só com papel gestor |
+| → `/dashboard` | `Package` | `"Painel JADLOG"` | `"Boletas, rastreio e financeiro do contrato Jadlog"` | `--panel-jadlog` | papel entregador |
+| → `/panel2` | `LayoutDashboard` | `"Painel 2"` | `"Boletas, rastreio e financeiro de outros contratos"` | `--panel-2` | papel entregador |
+| → `/gestor` | `Users` | `"Painel do Gestor"` | `"Entregadores, convites e resultados da sua organização"` | `--role-gestor` | papel gestor |
+| → `/gestao` | `ShieldCheck` | `"Gestão"` | `"Usuários e organizações de todo o sistema"` | `--destructive` | admin |
 
-Uma seta `"→"` aparece no hover.
+### 11.3a Navegação fixa — `AppShell` e `AppNav`
 
-### 11.3 Cabeçalho — `DashboardHeader` (`components/dashboard-header.tsx`)
+- `components/app-shell.tsx` (servidor): recebe o usuário já resolvido pela página, busca os papéis (`getActiveRoles(user.id)`) e monta os itens com `navItems` (`lib/nav.ts`). Prop `panel` vira `data-panel` no `<main>`.
+- `navItems({ isAdmin, hasEntregador, hasGestor })`, nesta ordem:
 
-Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`, `viewerMode?: { entregadorName, mode?: "gestor" | "admin", backHref? }`.
+| Item | Rota | Rótulo | Ícone | Condição |
+|---|---|---|---|---|
+| JADLOG | `/dashboard` | `"JADLOG"` | `Package` | entregador |
+| Painel 2 | `/panel2` | `"Painel 2"` | `LayoutDashboard` | entregador |
+| Gestor | `/gestor` | `"Gestor"` | `Users` | gestor |
+| Auditoria | `/gestor/auditoria` | `"Auditoria"` | `History` | gestor ou admin |
+| Gestão | `/gestao` | `"Gestão"` | `ShieldCheck` | admin |
 
-1. **Faixa de modo** (só com `viewerMode`):
-   - admin → borda e fundo vermelhos + `"⚠ Modo ADMIN MASTER — editando {nome}"`;
-   - gestor → verde + `"Visualizando como gestor: {nome} · somente leitura"`;
-   - botão `"← Voltar"` para `backHref`, que vale `"/gestao"` para o admin e `"/gestor"` para o gestor.
-2. **Esquerda:** link para `/select` (ou `backHref` no modo de visualização) com:
-   - quadrado `primary` com ícone `Package`;
-   - `{panelName ?? "JADLOG"}`;
-   - `"Painel de Controle · {ano}"`, com `ano = new Date().getFullYear()` (muda sozinho na virada do ano).
-   - **Não** existem `"+ nuvem"` nem o indicador `"sincronizado"`.
-3. **Direita:**
-   - `"Logado como"` + nome **[DECIDIR Q1]**;
-   - botão de tema (sol/lua, `aria-label "Trocar tema claro/escuro"`, `components/theme-toggle.tsx`): troca o `data-theme` do `<html>` e a `meta theme-color` na hora, grava o cookie no cliente no mesmo clique (1 ano, `samesite=lax`) e chama a action `setTheme` (`app/actions/theme.ts`, mesmo cookie, sem login), que atualiza o layout. O cookie no cliente existe porque navegar antes de a action terminar cancela a action;
-   - engrenagem (escondida no modo de visualização);
-   - `"Gestão"` (só com `isAdmin` e fora do modo de visualização);
-   - `"⇄ Trocar painel"` (escondido no modo de visualização);
-   - `"Sair"` (form → `logout`).
-   - Abaixo do breakpoint `sm`, `"Gestão"`, `"Trocar painel"` e `"Sair"` mostram só o ícone (`⇄` no Trocar painel), com `aria-label` igual ao texto. O grupo usa `flex-wrap`, para não gerar rolagem horizontal em 375 px.
-4. **Modal "Configurações da conta"** (`"Atualize seus dados de acesso."`), com duas abas:
-   - `"Perfil"`: campos `"Nome"` e `"E-mail"`, botão `"Salvar dados"` (`"Salvando..."`), mensagem de sucesso `"Dados atualizados com sucesso!"`;
-   - `"Senha"`: campos `"Senha atual"`, `"Nova senha"` (`"Mínimo 6 caracteres"`) e `"Confirmar nova senha"` (`"Repita a nova senha"`), botão `"Alterar senha"` (`"Alterando..."`), mensagem de sucesso `"Senha alterada com sucesso!"`.
+- Item ativo (`isNavActive`): rota exata; o item `/gestor` também fica ativo em `/gestor/entregadores/...` (não na auditoria). Ativo = `aria-current="page"`, fundo `muted` e ícone na cor de identidade (`--panel-jadlog`, `--panel-2`, `--role-gestor`; os outros em `--primary`).
+- `components/app-nav.tsx` (cliente):
+  - **Barra superior** (sempre): `sticky top-0`, altura 56 px, borda inferior, fundo translúcido com desfoque. Esquerda: logo `MYLOG` (quadrado `primary` com `Package`) → `/select` (`aria-label "MYLOG — início"`). Do `md` para cima, os itens ficam ao lado do logo (`<nav aria-label="Navegação principal">`). Direita: menu de conta.
+  - **Barra inferior** (abaixo do `md`, só com 1+ item): `fixed bottom-0`, um item por coluna, ícone + rótulo de 11 px, altura mínima 56 px, `pb-[env(safe-area-inset-bottom)]`.
+  - **Menu de conta** (`components/ui/dropdown-menu.tsx`, Base UI `Menu`): gatilho com as iniciais num círculo (+ nome e seta a partir do `lg`), `aria-label "Conta de {nome}"`. Itens: nome e e-mail; `"Configurações da conta"` (abre o modal da §11.3); `"Tema claro"` / `"Tema escuro"` (troca na hora, não fecha o menu; mesma lógica do cookie: `applyTheme`, `components/theme-toggle.tsx`, + action `setTheme`); `"Sair"` (vermelho, chama `logout`).
+
+### 11.3 Cabeçalho da página — `DashboardHeader` (`components/dashboard-header.tsx`, servidor)
+
+Props: `title`, `subtitle?`, `viewerMode?: { entregadorName, mode?: "gestor" | "admin", backHref }`, `actions?` (nó à direita do título).
+
+1. **Faixa de modo** (só com `viewerMode`, `role="status"`):
+   - admin → borda e fundo vermelhos, ícone `ShieldAlert` + `"Modo ADMIN MASTER — editando {nome}"`;
+   - gestor → cor `--role-gestor`, ícone `Eye` + `"Visualizando como gestor: {nome} · somente leitura"`;
+   - link `"Voltar"` (ícone `ArrowLeft`) para `backHref` (§8).
+2. `<h1>` com o título (`text-primary`) e o subtítulo embaixo; `actions` à direita.
+
+Títulos e subtítulos: `/dashboard` `"JADLOG"` / `"Boletas, rastreio e financeiro do contrato Jadlog"`; `/panel2` `"Painel 2"` / `"Boletas, rastreio e financeiro de outros contratos"`; `/gestor` `"Painel do Gestor"` / `"Visão da sua organização"`; drill-down `{nome}` / `"Entregador"` (gestor) ou `"Entregador · {organização}"` (admin); auditoria `"Auditoria"` / `"Edições de todas as organizações"` (admin) ou `"Edições feitas na sua organização"`; `/gestao` `"Gestão de Usuários"`.
+
+Nome do usuário logado, tema, configurações e sair ficam no menu de conta (§11.3a). Não existem mais `"Logado como"`, `"⇄ Trocar painel"`, `"Painel de Controle · {ano}"`, `"+ nuvem"` nem `"sincronizado"`.
+
+**Modal "Configurações da conta"** (`components/account-settings-dialog.tsx`, aberto pelo menu de conta; `"Atualize seus dados de acesso."`), com duas abas:
+- `"Perfil"`: campos `"Nome"` e `"E-mail"`, botão `"Salvar dados"` (`"Salvando..."`), mensagem de sucesso `"Dados atualizados com sucesso!"`;
+- `"Senha"`: campos `"Senha atual"`, `"Nova senha"` (`"Mínimo 6 caracteres"`) e `"Confirmar nova senha"` (`"Repita a nova senha"`), botão `"Alterar senha"` (`"Alterando..."`), mensagem de sucesso `"Senha alterada com sucesso!"`.
 
 ### 11.4 Abas do painel — `DashboardTabs` (`components/dashboard-tabs.tsx`)
 
@@ -909,13 +923,12 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 ### 11.9 Gestor
 
 **`/gestor`** (`app/gestor/page.tsx`), de cima para baixo:
-1. Header `"Painel do Gestor"`.
-2. Link `"Histórico de edições dos entregadores"` → `/gestor/auditoria`.
-3. `StatsOverview` com os dados da organização inteira. **[DEFEITO D6]**
-4. `"Composição por painel"`: um cartão por painel (os padrões sempre aparecem) com `"{n} entregas"` e o líquido.
-5. `InvitesPanel`.
-6. `"Entregadores ({n})"`:
-   - um cartão-link por entregador → `/gestor/entregadores/{id}`, com nome, e-mail, `"{n} entregas"` e líquido somado de todos os painéis;
+1. Cabeçalho `"Painel do Gestor"` / `"Visão da sua organização"`. (A auditoria saiu daqui: fica na barra de navegação.)
+2. `StatsOverview` com os dados da organização inteira. **[DEFEITO D6]**
+3. `"Composição por painel"`: um cartão por painel (os padrões sempre aparecem) com `"{n} entregas"` e o líquido.
+4. `InvitesPanel`.
+5. `"Entregadores ({n})"`:
+   - um cartão-link por entregador → `/gestor/entregadores/{id}?from=gestor`, com nome, e-mail, `"{n} entregas"` e líquido somado de todos os painéis;
    - vazio → `"Nenhum entregador nesta organização ainda"` + `Use "Convidar entregador" acima para gerar um link de convite.`.
 
 **`InvitesPanel`** (`components/invites-panel.tsx`):
@@ -931,7 +944,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 6. Botão `"Ver"` / `"Ocultar"` `"histórico de convites aceitos ({n})"`. Cada item: `"{nome} aceitou {o convite de email | um convite} em {data}"`. Vazio → `"Nenhum convite aceito ainda."`.
 
 **Drill-down** `/gestor/entregadores/[userId]` (`MemberPanelTabs`):
-- Header com `panelName = nome do entregador` e `viewerMode`.
+- Cabeçalho com o nome do entregador e `viewerMode` (§11.3); o "Voltar" segue o `?from=` (§8).
 - Uma aba por painel. Cada aba tem só `DashboardTabs`; os cartões do topo vêm dele e seguem o filtro de período.
 - Gestor: `readOnly` (sem formulários nem botões de editar ou excluir; o CSV continua disponível).
 - Admin: escrita habilitada com as ações admin.
@@ -988,7 +1001,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 **`UsersPanel`** (`components/users-panel.tsx`): título `"Usuários cadastrados ({n})"`. Vazio → `"Nenhum usuário cadastrado"`.
 - Colunas: `"Nome"`, `"E-mail"`, `"Login"` (badge `"Google"` ou `"Senha"`), `"Criado em"` e `"Ações"`.
 - Ações por linha:
-  - escudo → `/gestor/entregadores/{id}` (modo ADMIN MASTER);
+  - escudo → `/gestor/entregadores/{id}?from=gestao` (modo ADMIN MASTER; `next/link` com `buttonVariants`, `aria-label "Editar dados de {nome} como ADMIN MASTER"`);
   - lápis → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."`: campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, fecha e mostra o toast `"Dados atualizados!"`;
   - chave → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, fecha e mostra o toast `"Senha redefinida!"`;
   - lixeira (desabilitada para o próprio admin) → modal `"Excluir {nome}?"` / `"Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."`, botão `"Excluir permanentemente"` (`"Excluindo..."`); o erro aparece no modal.
@@ -1085,7 +1098,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **98/98**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **110/110**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
@@ -1096,6 +1109,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 | `lib/forms.test.ts` | `parseMoney` (ponto e vírgula, vazio → 0, recusa negativo, texto, 3 casas, notação científica e valor grande); `parseCount` (inteiro ≥ 0, vazio → 0, recusa negativo, decimal, texto e acima do limite); `parseISODate` (válida; recusa formato errado e data inexistente); `parseDailyRecordForm`, `parseDeliveryForm` e `parseTransactionForm` (normalização, padrões, mensagens, painel/status/tipo inválidos, id na edição, 'hoje' recebido) |
 | `lib/dates.test.ts` | `localDateISO` usa a data local (23:30 continua o mesmo dia) e preenche com 2 dígitos; `todayISOIn` em São Paulo antes e depois das 03:00 UTC |
 | `lib/metrics.test.ts` | `recordGross`; `recordNet` (normal e negativo); `netByQuinzena`: null sem boletas; dia 15 vai para a 1ª e dia 16 para a 2ª; mês de referência na virada do ano; ignora outros meses; `lastDay`; 2ª quinzena vazia; `days` conta datas distintas; valor negativo; soma das quinzenas = líquido do mês |
+| `lib/nav.test.ts` | `navItems` por combinação de papéis (entregador, gestor, dual-role, admin sem papel, admin com tudo, ninguém) e rótulos curtos de até 9 letras; `isNavActive` (rota exata, `/gestor` no drill-down e não na auditoria, prefixo parecido não conta); `drillDownBackHref` (gestor sempre `/gestor`; admin segue `from`, valor estranho → `/gestao`) |
 | `lib/theme.test.ts` | `parseTheme` (`light`/`dark`; vazio, maiúsculas e lixo → escuro); `themeColor` dos dois temas; nome do cookie `theme` |
 | `lib/user-deletion.test.ts` | `planUserDeletion`: sem organização própria → pode; organização só dele → vai junto; dono de organização com outros membros → recusa com o nome; recusa se qualquer organização própria for compartilhada |
 | `lib/theme-tokens.test.ts` | todo token do tema escuro existe no claro e vice-versa (exceto `radius`); o Painel 2 tem a mesma lista de tokens nos dois temas |
@@ -1158,7 +1172,7 @@ Limites aceitos (não são defeitos): o limite de tentativas fica em memória (�
 
 | ID | Pergunta | Regra atual |
 |---|---|---|
-| Q1 | O v1 pedia tirar o nome do usuário "da página inicial". A `/` não mostra nome. Manter `"Logado como {nome}"` no cabeçalho dos painéis? | Mantém. |
+| Q1 | O v1 pedia tirar o nome do usuário "da página inicial". A `/` não mostra nome. Manter o nome do usuário logado nos painéis? | Mantém, no menu de conta da barra fixa (§11.3a), desde 2026-11-13. O `/select` mostra `"Olá, {primeiro nome}"`. |
 | Q2 | O v1 pedia o resumo "embaixo do último dia do mês". Manter a ordem decrescente (resumo abaixo do dia mais antigo) ou mudar para crescente? | Decrescente. |
 | Q3 | O bruto conta só as entregas realizadas × valor? As agendadas e as com ocorrência ficam só como contagem? | Sim. |
 

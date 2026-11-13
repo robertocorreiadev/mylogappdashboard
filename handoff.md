@@ -48,8 +48,11 @@ caminhos certos (detalhe no `TODO.md`). Commit + push da Fase 0 em 2026-11-13.
 
 **Fase 1 (fundação visual) — feita (2026-11-13).**
 tsc limpo, 98/98, build ok, smoke test público e logado ok. Commit + push
-em 2026-11-13. **Próximo:** Fase 2 (navegação fixa por papel). Detalhe no
-`TODO.md`.
+em 2026-11-13. Detalhe no `TODO.md`.
+
+**Fase 2 (navegação fixa por papel) — feita (2026-11-13).**
+tsc limpo, 110/110, build ok, smoke test no navegador ok. Commit + push em
+2026-11-13. **Próximo:** Fase 3 (telas do entregador).
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation"
-import { Users, History } from "lucide-react"
+import Link from "next/link"
+import { Users } from "lucide-react"
 import { requireGestor } from "@/app/actions/auth"
 import { getOrgOverview } from "@/app/actions/gestor"
 import { listPendingInvites, listAcceptedInvites } from "@/app/actions/invites"
+import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { StatsOverview } from "@/components/stats-overview"
 import { InvitesPanel } from "@/components/invites-panel"
@@ -47,14 +49,8 @@ export default async function GestorPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <DashboardHeader userName={ctx.user.name} userEmail={ctx.user.email} panelName="Painel do Gestor" />
-
-      <div className="mb-4 flex justify-end">
-        <a href="/gestor/auditoria" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <History className="h-4 w-4" /> Histórico de edições dos entregadores
-        </a>
-      </div>
+    <AppShell user={ctx.user}>
+      <DashboardHeader title="Painel do Gestor" subtitle="Visão da sua organização" />
 
       <StatsOverview deliveries={deliveries} transactions={transactions} dailyRecords={dailyRecords} />
 
@@ -102,10 +98,10 @@ export default async function GestorPage() {
                 const stats = byUser.get(m.userId)
                 const net = stats?.net ?? 0
                 return (
-                  <a
+                  <Link
                     key={m.userId}
-                    href={`/gestor/entregadores/${m.userId}`}
-                    className="rounded-lg border border-border p-4 transition-colors hover:border-primary/50 hover:bg-secondary/40"
+                    href={`/gestor/entregadores/${m.userId}?from=gestor`}
+                    className="rounded-lg border border-border p-4 outline-none transition-colors hover:border-primary/50 hover:bg-secondary/40 focus-visible:ring-3 focus-visible:ring-ring/50"
                   >
                     <p className="font-semibold text-foreground">{m.name}</p>
                     <p className="text-xs text-muted-foreground">{m.email}</p>
@@ -115,13 +111,13 @@ export default async function GestorPage() {
                         {formatCurrency(net)}
                       </span>
                     </div>
-                  </a>
+                  </Link>
                 )
               })}
             </div>
           )}
         </CardContent>
       </Card>
-    </main>
+    </AppShell>
   )
 }

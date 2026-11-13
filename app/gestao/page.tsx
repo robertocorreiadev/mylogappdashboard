@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { requireAdmin } from "@/app/actions/auth"
 import { getAllUsers } from "@/app/actions/admin-users"
+import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { UsersPanel } from "@/components/users-panel"
 import { CreateOrganizationPanel } from "@/components/create-organization-panel"
@@ -16,16 +17,13 @@ export default async function UsuariosPage() {
   const allUsers = await getAllUsers()
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
+    <AppShell user={admin}>
       <DashboardHeader
-        userName={admin.name}
-        userEmail={admin.email}
-        panelName="Gestão de Usuários"
+        title="Gestão de Usuários"
+        subtitle="Usuários e organizações de todo o sistema"
+        actions={<CreateOrganizationPanel users={allUsers} />}
       />
-      <div className="mb-4 flex justify-end">
-        <CreateOrganizationPanel users={allUsers} />
-      </div>
       <UsersPanel users={allUsers} currentUserId={admin.id} />
-    </main>
+    </AppShell>
   )
 }

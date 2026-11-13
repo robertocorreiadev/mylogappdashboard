@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation"
 import { requireUser } from "@/app/actions/auth"
-import { isAdminEmail } from "@/lib/auth"
 import { getDeliveries } from "@/app/actions/deliveries"
 import { getTransactions } from "@/app/actions/transactions"
 import { getDailyRecords } from "@/app/actions/daily-records"
 import { PanelTheme } from "@/components/panel-theme"
+import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardTabs } from "@/components/dashboard-tabs"
 
@@ -31,24 +31,15 @@ export default async function Panel2Page() {
   }
 
   return (
-    <main
-      className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8"
-      data-panel={PANEL}
-    >
+    <AppShell user={user} panel={PANEL}>
       <PanelTheme panel={PANEL} />
-      <DashboardHeader
-        userName={user.name}
-        userEmail={user.email}
-        panelName="Painel 2"
-        panel={PANEL}
-        isAdmin={isAdminEmail(user.email)}
-      />
+      <DashboardHeader title="Painel 2" subtitle="Boletas, rastreio e financeiro de outros contratos" />
       <DashboardTabs
         deliveries={deliveries}
         transactions={transactions}
         dailyRecords={dailyRecords}
         panel={PANEL}
       />
-    </main>
+    </AppShell>
   )
 }

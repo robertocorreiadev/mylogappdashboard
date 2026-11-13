@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Package, Database } from "lucide-react"
 import { getUserId } from "@/lib/session"
 import { getInviteByToken } from "@/lib/invites"
@@ -20,9 +21,9 @@ function InviteError({ message }: { message: string }) {
         <Package className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
         <h1 className="mb-2 text-lg font-bold text-foreground">Convite indisponível</h1>
         <p className="text-sm text-muted-foreground">{message}</p>
-        <a href="/" className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
+        <Link href="/" className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
           Ir para o login
-        </a>
+        </Link>
       </div>
     </main>
   )

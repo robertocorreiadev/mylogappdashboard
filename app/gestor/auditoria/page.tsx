@@ -3,6 +3,7 @@ import { History } from "lucide-react"
 import { requireUser, requireGestor } from "@/app/actions/auth"
 import { isAdminEmail } from "@/lib/auth"
 import { getAuditLog, getAuditLogGlobal } from "@/app/actions/gestor"
+import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { AuditLogRow } from "@/components/audit-log-row"
 import { Card, CardContent } from "@/components/ui/card"
@@ -33,8 +34,11 @@ export default async function AuditoriaPage() {
   const canDelete = isAdmin
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
-      <DashboardHeader userName={user.name} userEmail={user.email} panelName="Auditoria" />
+    <AppShell user={user}>
+      <DashboardHeader
+        title="Auditoria"
+        subtitle={isAdmin ? "Edições de todas as organizações" : "Edições feitas na sua organização"}
+      />
 
       <Card>
         <CardContent className="p-4 md:p-6">
@@ -56,6 +60,6 @@ export default async function AuditoriaPage() {
           )}
         </CardContent>
       </Card>
-    </main>
+    </AppShell>
   )
 }

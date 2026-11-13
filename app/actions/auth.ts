@@ -91,8 +91,8 @@ export async function resolveViewerMode(): Promise<ViewerMode> {
 // Não lança erro — usado por /select para decidir quais opções mostrar
 // (ex.: conta dual-role vê o seletor gestor/entregador; conta só-entregador
 // nunca vê nada relacionado a gestor).
-export async function getActiveRoles(): Promise<Array<"gestor" | "entregador">> {
-  const userId = await getUserId()
+export async function getActiveRoles(knownUserId?: number): Promise<Array<"gestor" | "entregador">> {
+  const userId = knownUserId ?? await getUserId()
   if (!userId) return []
   const rows = await db.select({ role: memberships.role }).from(memberships)
     .where(and(eq(memberships.userId, userId), eq(memberships.status, "active")))

@@ -7,10 +7,17 @@ import {
   adminCreateDelivery, adminUpdateDeliveryStatus, adminDeleteDelivery,
   adminCreateTransaction, adminUpdateTransaction, adminDeleteTransaction,
 } from "@/app/actions/admin-override"
+import { AppShell } from "@/components/app-shell"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { drillDownBackHref } from "@/lib/nav"
 import { MemberPanelTabs } from "@/components/member-panel-tabs"
 
-export default async function GestorEntregadorPage({ params }: { params: Promise<{ userId: string }> }) {
+export default async function GestorEntregadorPage({
+  params, searchParams,
+}: {
+  params: Promise<{ userId: string }>
+  searchParams: Promise<{ from?: string | string[] }>
+}) {
   let viewer
   try {
     viewer = await resolveViewerMode()
@@ -19,6 +26,8 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
   }
 
   const { userId } = await params
+  const fromParam = (await searchParams).from
+  const backHref = drillDownBackHref(viewer.mode, typeof fromParam === "string" ? fromParam : undefined)
   const targetUserId = Number(userId)
   if (!targetUserId) notFound()
 
@@ -30,12 +39,11 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
     if (!data) notFound()
 
     return (
-      <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
+      <AppShell user={viewer.user}>
         <DashboardHeader
-          userName={viewer.user.name}
-          userEmail={viewer.user.email}
-          panelName={data.member.name}
-          viewerMode={{ entregadorName: data.member.name, mode: "admin" }}
+          title={data.member.name}
+          subtitle={`Entregador · ${data.orgName}`}
+          viewerMode={{ entregadorName: data.member.name, mode: "admin", backHref }}
         />
         <MemberPanelTabs
           panels={data.panels}
@@ -50,7 +58,7 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
             onDeleteTransaction: adminDeleteTransaction.bind(null, data.organizationId, targetUserId),
           }}
         />
-      </main>
+      </AppShell>
     )
   }
 
@@ -62,14 +70,13 @@ export default async function GestorEntregadorPage({ params }: { params: Promise
   if (!data) notFound()
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 md:px-6 md:py-8">
+    <AppShell user={viewer.user}>
       <DashboardHeader
-        userName={viewer.user.name}
-        userEmail={viewer.user.email}
-        panelName={data.member.name}
-        viewerMode={{ entregadorName: data.member.name }}
+        title={data.member.name}
+        subtitle="Entregador"
+        viewerMode={{ entregadorName: data.member.name, backHref }}
       />
       <MemberPanelTabs panels={data.panels} />
-    </main>
+    </AppShell>
   )
 }
