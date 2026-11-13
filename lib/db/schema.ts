@@ -61,7 +61,7 @@ export const auditLogs = pgTable("audit_logs", {
   id:             bigserial("id", { mode: "number" }).primaryKey(),
   organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
   actorUserId:    integer("actor_user_id").notNull().references(() => users.id),
-  entityType:     text("entity_type").notNull(), // "daily_record" | "delivery" | "transaction"
+  entityType:     text("entity_type").notNull(), // "daily_record" | "delivery" | "transaction" | "audit_log_entry" | "user"
   entityId:       integer("entity_id").notNull(),
   action:         text("action").notNull(), // "create" | "update" | "delete"
   fieldChanges:   jsonb("field_changes"),

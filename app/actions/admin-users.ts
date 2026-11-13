@@ -1,5 +1,6 @@
 "use server"
 
+import { deleteUserCascade } from "@/lib/db/delete-user"
 import { eq, ne, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
@@ -61,18 +62,10 @@ export async function deleteUserAdmin(formData: FormData) {
   if (!id) return { error: "Usuário inválido." }
   if (id === admin.id) return { error: "Você não pode excluir sua própria conta por aqui." }
 
-  try {
-    await db.delete(users).where(eq(users.id, id))
-  } catch (err) {
-    // 23503 = foreign_key_violation (Postgres). Usuários com organização
-    // (owner_user_id), membership ou histórico de auditoria vinculados não
-    // têm ON DELETE CASCADE de propósito — apagar isso em cascata destruiria
-    // rastro de auditoria de outras pessoas. Erro amigável em vez de 500.
-    if (err && typeof err === "object" && "code" in err && err.code === "23503") {
-      return { error: "Não é possível excluir: este usuário tem organização, vínculo ou histórico de auditoria associados." }
-    }
-    throw err
-  }
+  // D8: exclusão em cascata (lib/db/delete-user.ts). Recusa se o usuário for
+  // dono de organização com outros membros (levaria os dados deles).
+  const res = await deleteUserCascade(id, admin.id)
+  if (res.error) return res
   revalidatePath("/gestao")
   return { success: true }
 }

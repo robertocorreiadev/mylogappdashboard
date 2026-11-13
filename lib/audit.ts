@@ -7,7 +7,7 @@
 import { db } from "@/lib/db"
 import { auditLogs } from "@/lib/db/schema"
 
-type EntityType = "daily_record" | "delivery" | "transaction" | "audit_log_entry"
+type EntityType = "daily_record" | "delivery" | "transaction" | "audit_log_entry" | "user"
 type AuditAction = "create" | "update" | "delete"
 
 // Colunas de housekeeping que não interessam no diff (sempre mudam, não são

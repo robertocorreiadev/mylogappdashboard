@@ -11,6 +11,7 @@ const ENTITY_LABELS: Record<string, string> = {
   delivery: "entrega",
   transaction: "lançamento financeiro",
   audit_log_entry: "entrada de auditoria",
+  user: "usuário",
 }
 const ACTION_LABELS: Record<string, string> = { create: "criou", update: "editou", delete: "excluiu" }
 
@@ -33,6 +34,8 @@ type LogEntry = {
   fieldChanges: unknown
   createdAt: Date
   actorName: string
+  /** Só na visão global do admin master (D10). */
+  orgName?: string
 }
 
 export function AuditLogRow({ log, canDelete = false }: { log: LogEntry; canDelete?: boolean }) {
@@ -50,6 +53,7 @@ export function AuditLogRow({ log, canDelete = false }: { log: LogEntry; canDele
           {ACTION_LABELS[log.action] ?? log.action}{" "}
           {ENTITY_LABELS[log.entityType] ?? log.entityType} #{log.entityId}
           <span className="ml-2 text-xs text-muted-foreground">{formatDate(log.createdAt)}</span>
+          {log.orgName && <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">{log.orgName}</span>}
         </p>
         {changes.length > 0 && (
           <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">

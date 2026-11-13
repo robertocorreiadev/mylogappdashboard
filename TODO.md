@@ -397,6 +397,30 @@ espremido no fim desta revisão.
       confirmação; unificar com `ConfirmDeleteButton` (aceitar descrição e
       `{ error }` da action) quando mexer nessa tela.
 
+## D8, D10 e D15 da spec (2026-11-09, fechado em 2026-11-13)
+- [x] D8: exclusão de usuário em cascata (`lib/db/delete-user.ts`, regra pura
+      em `lib/user-deletion.ts` + teste). Recusa dono de organização com
+      outros membros. Revisão de 2026-11-13: a checagem de dono passou para
+      dentro da transação, com `FOR UPDATE` na organização (um aceite de
+      convite no meio não perde dados). Parâmetro `exec` opcional para
+      dry-run com ROLLBACK.
+- [x] D8: dry-run no banco real em 2026-11-13 (OK do usuário), transação
+      externa + ROLLBACK, 3 caminhos: entregador da org 1 (17 boletas → 0,
+      1 meta-registro na org 1), dono de organização individual (org vai
+      junto, sem meta-registro), dono da "Legado" com 3 membros (recusa).
+      Depois do ROLLBACK, contagens iguais às de antes. O dry-run achou
+      queries simultâneas no cliente da transação (deprecated no pg 9):
+      contagens agora em sequência.
+- [x] D10: `/gestor/auditoria` do admin mostra todas as organizações
+      (`getAuditLogGlobal`, 300 mais recentes, selo com o nome da
+      organização). Testado no navegador em 2026-11-09 (63/63 entradas).
+- [x] D15: não se reproduz em dev nem no build (2026-11-09). Guarda em
+      `lib/theme-tokens.test.ts`. Revalidar ao criar o botão de tema.
+- [ ] Débito: o driver `pg` (8.22) mostra um aviso de segurança sobre o
+      `sslmode` do `DATABASE_URL` (os modos `prefer`/`require`/`verify-ca`
+      viram aliases de `verify-full` numa versão futura). Trocar para
+      `sslmode=verify-full` explícito no `.env` e na Vercel, e testar.
+
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev
       para todo smoke test cair nos piores casos sem esforço: valores
@@ -415,11 +439,4 @@ espremido no fim desta revisão.
   teste. Server actions (`app/actions/*.ts`) e componentes não são testados
   — dependem de banco/`next/headers`, exigiriam mocks ou um banco de teste.
 - ~~Sem CI configurado~~ resolvido em 2026-09-25 (`.github/workflows/ci.yml`).
-- **Tema claro do design system não pinta `<html>`/`<body>` de verdade**:
-  os tokens (`[data-theme="light"]` em `app/globals.css`) resolvem
-  corretamente via `getComputedStyle` (`--background` = `#f4f5f8`), mas o
-  `background-color` computado final de `<html>`/`<body>` não muda —
-  alguma regra (suspeita: `shadcn/tailwind.css` importado) ganha a
-  cascata pro valor literal. Só importa quando o toggle de UI for
-  construído (hoje o tema claro é só tokens prontos, sem toggle) — não é
-  bloqueante, mas precisa investigar antes de expor a troca pro usuário.
+- ~~Tema claro não pinta `<html>`/`<body>`~~ não se reproduz (D15, 2026-11-09).

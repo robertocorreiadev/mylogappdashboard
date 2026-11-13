@@ -2,8 +2,8 @@
 
 import { and, desc, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
-import { memberships, users, auditLogs } from "@/lib/db/schema"
-import { requireGestor, type MembershipContext } from "@/app/actions/auth"
+import { memberships, users, auditLogs, organizations } from "@/lib/db/schema"
+import { requireAdmin, requireGestor, type MembershipContext } from "@/app/actions/auth"
 import {
   dailyRecordsForOrg, deliveriesForOrg, transactionsForOrg,
   dailyRecordsForUserAllPanels, deliveriesForUserAllPanels, transactionsForUserAllPanels,
@@ -99,4 +99,25 @@ export async function getAuditLog(known?: MembershipContext) {
     .where(eq(auditLogs.organizationId, organizationId))
     .orderBy(desc(auditLogs.createdAt))
     .limit(200)
+}
+
+// D10: auditoria de TODAS as organizações — só o admin master (ADMIN_EMAIL).
+// Gestor continua restrito à própria organização (getAuditLog acima).
+export async function getAuditLogGlobal() {
+  await requireAdmin()
+  return db.select({
+    id: auditLogs.id,
+    entityType: auditLogs.entityType,
+    entityId: auditLogs.entityId,
+    action: auditLogs.action,
+    fieldChanges: auditLogs.fieldChanges,
+    createdAt: auditLogs.createdAt,
+    actorName: users.name,
+    orgName: organizations.name,
+  })
+    .from(auditLogs)
+    .innerJoin(users, eq(users.id, auditLogs.actorUserId))
+    .innerJoin(organizations, eq(organizations.id, auditLogs.organizationId))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(300)
 }

@@ -445,8 +445,8 @@ Os parâmetros opcionais `knownUser` (em `auth.ts`) e `known?: MembershipContext
 | Ver a organização (`/gestor`) | — | ✅ só a própria | ✅ só se também for gestor |
 | Drill-down de um entregador | — | ✅ só leitura, mesma organização (outra → 404) | ✅ **escrita**, qualquer organização |
 | Convites | — | ✅ | ✅ se for gestor |
-| Ler a auditoria | — | ✅ (200 mais recentes) | ✅ se for gestor |
-| Excluir uma entrada da auditoria | — | — | ✅ **[DEFEITO D10]** |
+| Ler a auditoria | — | ✅ só a própria organização (200 mais recentes) | ✅ **todas** as organizações (300 mais recentes), mesmo sem papel gestor |
+| Excluir uma entrada da auditoria | — | — | ✅ de qualquer organização |
 | `/gestao` (usuários e organizações) | — | — | ✅ |
 
 ### 7.3 Isolamento entre organizações
@@ -466,7 +466,7 @@ Os parâmetros opcionais `knownUser` (em `auth.ts`) e `known?: MembershipContext
 | `/panel2` | `app/panel2/page.tsx` | entregador | Igual a `/dashboard`, com `PANEL = "panel2"`, `panelName "Painel 2"` e `<main data-panel="panel2">`, que ativa o tema azul. |
 | `/gestor` | `app/gestor/page.tsx` | gestor | Sem papel gestor → `/select`. Resolve `requireGestor()` **uma vez** e repassa às 3 consultas (§11.8). |
 | `/gestor/entregadores/[userId]` | `app/gestor/entregadores/[userId]/page.tsx` | gestor ou admin | 1. `resolveViewerMode()`. Se lançar (deslogado, ou logado sem ser admin nem gestor) → `redirect("/")`, e a `/` manda o logado para `/select`.<br>2. `params` é `Promise`. Id inválido → 404.<br>3. Admin → `adminGetTargetMemberData` + ações admin com `.bind(null, organizationId, targetUserId)`.<br>4. Gestor → `getMemberDashboardData(targetUserId, viewer)`, só leitura.<br>5. Alvo inexistente ou de fora → 404. |
-| `/gestor/auditoria` | `app/gestor/auditoria/page.tsx` | gestor | Precisa do papel gestor, mesmo para o admin. `canDelete = isAdminEmail`. |
+| `/gestor/auditoria` | `app/gestor/auditoria/page.tsx` | gestor ou admin | Admin → `getAuditLogGlobal()` (todas as organizações, sem precisar do papel gestor). Gestor → `getAuditLog(ctx)` (só a própria). Nenhum dos dois → `/select`. `canDelete = isAdminEmail`. |
 | `/gestao` | `app/gestao/page.tsx` | admin | Não é admin → `/select`. Header `panelName "Gestão de Usuários"`, botão "Nova organização" e tabela de usuários. |
 | `/convite/[token]` | `app/convite/[token]/page.tsx` | público | §11.10. |
 | `/api/auth/google` e `/callback` | §6.5 | público | — |
@@ -580,7 +580,13 @@ Regras comuns a todas:
 - `setUserPasswordAdmin(fd)` → não pede a senha atual. Mínimo de 6 caracteres e confirmação igual.
 - `deleteUserAdmin(fd)`:
   - o admin não pode excluir a si mesmo: `"Você não pode excluir sua própria conta por aqui."`;
-  - erro Postgres `23503` → `"Não é possível excluir: este usuário tem organização, vínculo ou histórico de auditoria associados."`.
+  - chama `deleteUserCascade(id, adminId)` (`lib/db/delete-user.ts`), numa transação só:
+    - dentro da transação, trava (`FOR UPDATE`) as organizações de que o usuário é dono e conta os outros membros de cada uma;
+    - `planUserDeletion` (`lib/user-deletion.ts`, função pura): alguma organização própria tem outro membro → recusa com `"Não é possível excluir: este usuário é dono da organização \"{nome}\", que tem {outro membro | outros {n} membros}. Excluir apagaria os dados deles."`;
+    - senão apaga as organizações individuais dele (boletas, entregas e lançamentos delas antes; memberships, convites e auditoria delas pelo cascade), anula `memberships.invited_by_user_id` e `invites.accepted_by_user_id` que apontam para ele, apaga os convites que ele criou e a auditoria em que ele é o autor, e por fim o usuário (cascade: memberships, boletas, entregas, lançamentos);
+    - grava um meta-registro `{ entityType: "user", action: "delete", actor = admin, snapshotBefore: { id, name, email, removidos: { boletas, entregas, lancamentos, organizacoesIndividuais } } }` em cada organização restante onde ele era membro;
+    - usuário inexistente → `"Usuário não encontrado."`.
+  - Parâmetro opcional `exec` (banco ou transação externa): permite um dry-run com ROLLBACK.
 
 `app/actions/organizations.ts` — `createOrganizationForGestor(fd)`:
 - `orgName` obrigatório: `"Nome da organização é obrigatório."`.
@@ -912,8 +918,9 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
 - Admin: escrita habilitada com as ações admin.
 
 **Auditoria** `/gestor/auditoria` (`AuditLogRow`, `components/audit-log-row.tsx`):
-- Header `"Auditoria"` e título `"Histórico de edições ({n})"`.
-- Cada item: `"{ator} {criou|editou|excluiu} {boleta diária|entrega|lançamento financeiro|entrada de auditoria} #{id}"` + data.
+- Header `"Auditoria"` e título `"Histórico de edições ({n})"`; para o admin, `"Histórico de edições ({n}) · todas as organizações"`.
+- Na visão do admin, cada item mostra também o nome da organização num selo cinza.
+- Cada item: `"{ator} {criou|editou|excluiu} {boleta diária|entrega|lançamento financeiro|entrada de auditoria|usuário} #{id}"` + data.
 - Abaixo do item vêm as mudanças, no formato `"{campo}: ~~antigo~~ → novo"`. Nomes dos campos:
 
   | Campo | Nome na tela |
@@ -965,7 +972,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - escudo → `/gestor/entregadores/{id}` (modo ADMIN MASTER);
   - lápis → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."`: campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, sucesso `"Dados atualizados!"` e fecha;
   - chave → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, sucesso `"Senha redefinida!"` e fecha;
-  - lixeira (desabilitada para o próprio admin) → modal `"Excluir {nome}?"` / `"Isso também apagará permanentemente todas as entregas, transações e boletas diárias desse usuário. Essa ação não pode ser desfeita."`, botão `"Excluir permanentemente"` (`"Excluindo..."`); o erro aparece no modal. **[DEFEITO D8]**
+  - lixeira (desabilitada para o próprio admin) → modal `"Excluir {nome}?"` / `"Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."`, botão `"Excluir permanentemente"` (`"Excluindo..."`); o erro aparece no modal.
 
 ---
 
@@ -998,7 +1005,7 @@ Props: `userName`, `userEmail`, `panelName?`, `panel?` (não usada), `isAdmin?`,
   - azul é a cor do Painel 2;
   - verde é a cor de saldo positivo;
   - vermelho é a cor de erro e de valor negativo.
-- **O tema padrão é o escuro (`:root`), sempre.** O tema claro existe só como tokens, ativado por `<html data-theme="light">`. Ainda não há botão para trocar de tema. **[DEFEITO D15]**
+- **O tema padrão é o escuro (`:root`), sempre.** O tema claro existe só como tokens, ativado por `<html data-theme="light">`. Ainda não há botão para trocar de tema.
 
 | Token | Escuro (`:root`, padrão) | Claro (`:root[data-theme="light"]`) |
 |---|---|---|
@@ -1040,7 +1047,7 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **86/86**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **93/93**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
@@ -1051,6 +1058,8 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 | `lib/forms.test.ts` | `parseMoney` (ponto e vírgula, vazio → 0, recusa negativo, texto, 3 casas, notação científica e valor grande); `parseCount` (inteiro ≥ 0, vazio → 0, recusa negativo, decimal, texto e acima do limite); `parseISODate` (válida; recusa formato errado e data inexistente); `parseDailyRecordForm`, `parseDeliveryForm` e `parseTransactionForm` (normalização, padrões, mensagens, painel/status/tipo inválidos, id na edição, 'hoje' recebido) |
 | `lib/dates.test.ts` | `localDateISO` usa a data local (23:30 continua o mesmo dia) e preenche com 2 dígitos; `todayISOIn` em São Paulo antes e depois das 03:00 UTC |
 | `lib/metrics.test.ts` | `recordGross`; `recordNet` (normal e negativo); `netByQuinzena`: null sem boletas; dia 15 vai para a 1ª e dia 16 para a 2ª; mês de referência na virada do ano; ignora outros meses; `lastDay`; 2ª quinzena vazia; `days` conta datas distintas; valor negativo; soma das quinzenas = líquido do mês |
+| `lib/user-deletion.test.ts` | `planUserDeletion`: sem organização própria → pode; organização só dele → vai junto; dono de organização com outros membros → recusa com o nome; recusa se qualquer organização própria for compartilhada |
+| `lib/theme-tokens.test.ts` | todo token do tema escuro existe no claro e vice-versa (exceto `radius`); o Painel 2 tem a mesma lista de tokens nos dois temas |
 | `lib/db/scopes.test.ts` | **teste de arquitetura**: nenhum arquivo `app/actions/*.ts` contém `.from(T)`, `db.update(T)`, `db.delete(T)` ou `db.insert(T)` para `T` ∈ {`dailyRecords`, `deliveries`, `transactions`} |
 
 As server actions e os componentes não têm teste automatizado. Eles dependem de banco e de `next/headers`.
@@ -1096,12 +1105,11 @@ Reconstruir **sem** estes defeitos. Para corrigir no sistema atual, abrir uma ta
 
 Corrigidos em 2026-11-09 (os IDs não são reaproveitados): **D5** (cartões duplicados no drill-down, `5c1796a`), **D14** (cabeçalho em 375 px, `6011e51`), **D16** (fórmula repetida, `6011e51`) **D7** (convites vencidos listados como pendentes), **D11** (modais do Painel 2 sem o tema), **D13** (excluir sem confirmação), **D2** (data "hoje" em UTC), **D3** (validação no servidor), **D9** (auditoria do `adminSaveDailyRecord`), **D12** (actions lançavam exceção), **D1** (login Google sem `verified_email`, segurança) e **D4** (`?error=` do login Google agora aparece na tela de login: tabela fixa de mensagens em `app/page.tsx`, código desconhecido não mostra nada).
 
+Corrigidos em 2026-11-13: **D8** (exclusão de usuário em cascata, §9.6), **D10** (auditoria global do admin, §7.2 e §11.9) e **D15** (o tema claro pinta certo no `next dev` e no build, conferido em 2026-11-09; guarda em `lib/theme-tokens.test.ts`).
+
 | ID | Onde | Defeito | Correção |
 |---|---|---|---|
 | D6 | `app/gestor/page.tsx` | Os cartões do topo somam os dois painéis, contra a regra de nunca somar painéis. | Mostrar só a composição por painel, ou cartões por painel. |
-| D8 | `UsersPanel`, modal de exclusão | O texto diz que apaga tudo, mas a exclusão é bloqueada (FK) para quase todos os usuários reais. | Ajustar o texto ou o fluxo. |
-| D10 | `/gestor/auditoria` | O admin só vê e exclui entradas da organização em que **ele** é gestor. Sem papel gestor, vai para `/select`. | Decidir se o admin deve ter uma auditoria global. |
-| D15 | `app/globals.css`, tema claro | Com `data-theme="light"`, os tokens resolvem certo (`getComputedStyle`: `--background = #f4f5f8`), mas o fundo calculado de `<html>`/`<body>` não muda. Suspeita: alguma regra de `shadcn/tailwind.css` ganha a cascata. Registrado no `TODO.md`. Não afeta hoje, porque não há botão para trocar de tema. | Investigar antes de criar o botão de tema. |
 
 Limites aceitos (não são defeitos): o limite de tentativas fica em memória (§6.3); a sessão dura 365 dias e não pode ser revogada (§6.2); o cookie de state do OAuth só vence depois de 10 min.
 

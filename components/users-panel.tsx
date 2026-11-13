@@ -176,7 +176,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           <DialogHeader>
             <DialogTitle>Excluir {user.name}?</DialogTitle>
             <DialogDescription>
-              Isso também apagará permanentemente todas as entregas, transações e boletas diárias desse usuário. Essa ação não pode ser desfeita.
+              Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           {deleteErr && (

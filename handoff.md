@@ -1,6 +1,6 @@
 # Handoff — MyLog Multi-Tenant
 
-Última atualização: 2026-11-09. Se esta sessão for interrompida, leia este
+Última atualização: 2026-11-13. Se esta sessão for interrompida, leia este
 arquivo primeiro, depois `TODO.md` (histórico detalhado por fase e da
 revisão) e o plano original em
 `C:\Users\IOT DEXTER\.claude\plans\vamos-arquitetar-um-sistema-mutable-quail.md`.
@@ -30,6 +30,21 @@ fonte única das fórmulas, `useMemo` no filtro dos KPIs, cabeçalho em 375px).
 
 Vercel conferida no painel em 2026-11-09: produção = `9955754` (Ready), com
 todas as correções e débitos. Nada pendente da faixa de quinzenas.
+
+## 🚧 Redesign de layout e intuitividade (iniciado em 2026-11-13)
+
+Plano aprovado: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheerful-torvalds.md`
+(fases 0 a 6: fechar D8/D10/D15 → fundação visual e tema claro com botão →
+navegação fixa por papel → entregador → gestor (inclui D6) → admin e
+primeiro acesso → fechamento). Um commit por fase; push só com OK do usuário.
+
+**Fase 0 (D8, D10, D15) — pronta para commit (2026-11-13).** Revisão do diff:
+a checagem de "dono de organização com outros membros" foi para dentro da
+transação, com `FOR UPDATE`. Spec §7.2, §8, §9.6, §11.9, §11.11, §13 e §15
+atualizadas; `TODO.md` com a seção "D8, D10 e D15". tsc limpo, 93/93,
+build ok. Dry-run do D8 no banco real com ROLLBACK (OK do usuário): os 3
+caminhos certos (detalhe no `TODO.md`). Commit + push da Fase 0 em 2026-11-13.
+**Próximo:** Fase 1 do plano (fundação visual).
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail
