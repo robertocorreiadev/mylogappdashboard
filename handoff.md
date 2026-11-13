@@ -79,7 +79,10 @@ pendências autonomamente"):** os 3 débitos da revisão (cor do painel,
 busca normalizada e textos da auditoria numa fonte só; última boleta sem
 recalcular tudo) e a base de teste de pior caso (fixture + 14 testes +
 script de seed com trava contra o banco de produção, não executado).
-160/160, build ok, smoke test das telas sem gravar.
+160/160, build ok, smoke test das telas sem gravar. **Commit `5b62b68`
+só local: o push foi bloqueado pelo classificador de permissões (deploy em
+produção sem o usuário presente). Primeiro passo ao voltar: revisar e dar
+OK para `git fetch && git push` (a Vercel publica `main`).**
 
 **⏭️ Próxima sessão — o que ficou para o usuário (exige gravar no banco de
 produção, credencial ou decisão dele):**
