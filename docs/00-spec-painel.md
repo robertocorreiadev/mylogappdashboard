@@ -390,7 +390,7 @@ liquido(r) = bruto(r) − Number(r.expenses)
 |---|---|
 | `login(fd)` | 1. `email` = trim + minúsculas. Sem e-mail ou sem senha → `{ error: "E-mail e senha são obrigatórios." }`.<br>2. Bloqueado → `{ error: "Muitas tentativas. Tente novamente em {ceil(ms/60000)} min." }`.<br>3. Usuário inexistente, sem `password_hash` ou com senha errada → `registerFailedAttempt` e `{ error: "E-mail ou senha inválidos." }`.<br>4. Senha certa → `clearAttempts`. Hash legado → regrava em scrypt.<br>5. `setUserId`. Se veio `inviteToken` → `acceptInvite` (melhor esforço: uma falha não bloqueia o login).<br>6. `redirect("/select")`. |
 | `register(fd)` | Validações, nesta ordem, com estas mensagens:<br>`"Nome é obrigatório."` · `"E-mail é obrigatório."` · `"Senha deve ter no mínimo 6 caracteres."` · `"As senhas não conferem."` (campo `confirm`) · `"Este e-mail já está cadastrado."`<br>Depois: cria o usuário com scrypt. Com `inviteToken` válido → entra na organização do convite. Sem convite, ou se o aceite falhar → `createSoloOrgForNewUser`. Por fim `setUserId` e `redirect("/select")`. |
-| `logout()` | `clearUserId()` e `redirect("/")`. |
+| `logout(formData?)` | `clearUserId()` e `redirect(safeLogoutRedirect(formData.next))` (`lib/auth-redirect.ts`): só aceita `/convite/{token base64url}` (o "Trocar conta" do convite); qualquer outro valor → `"/"`. |
 | `updateProfile(fd)` | Nome e e-mail obrigatórios: `"Nome e e-mail são obrigatórios."`. E-mail de outro usuário → `"Este e-mail já está em uso."`. Sucesso → `{ success: true }`. |
 | `changePassword(fd)` | Campos `current`, `newPass`, `confirmPass`. Mensagens, nesta ordem:<br>`"Preencha todos os campos."` · `"Nova senha deve ter no mínimo 6 caracteres."` · `"As senhas não conferem."` · `"Sua conta usa login com Google. Não é possível definir senha por aqui."` · `"Senha atual incorreta."` |
 
@@ -683,7 +683,7 @@ Regras comuns a todas:
 
 ## 11. Telas, componentes e textos exatos
 
-Ícones: `lucide-react`. Padrão visual dos cartões de tela cheia: `rounded-xl border bg-card p-10 shadow-2xl`, centralizados com `max-w-sm`.
+Ícones: `lucide-react`. Padrão visual dos cartões de tela cheia (login, convite, erro, 404): `rounded-xl border bg-card p-6 shadow-2xl sm:p-10`, centralizados com `max-w-sm` (24 px de espaço interno no celular, 40 px do `sm` para cima).
 
 ### 11.1 Login — `/` (`app/page.tsx`)
 
@@ -703,14 +703,15 @@ A tela **não** mostra nome de usuário.
 **`LoginForm`** (`components/login-form.tsx`, prop opcional `inviteToken`), nesta ordem:
 1. Link `"Entrar com Google"` (logo "G" do Google em SVG de 4 cores) → `/api/auth/google`, ou `?invite={token}` quando há convite.
 2. Divisor `"ou"`.
-3. Campo `"E-mail"` (`placeholder "seu@email.com"`) e campo `"Senha"` (`"••••••"`).
+3. Campo `"E-mail"` (`placeholder "seu@email.com"`) e campo `"Senha"` (`"••••••"`, `PasswordInput`: botão de olho `"Mostrar senha"` / `"Ocultar senha"`, `aria-pressed`).
 4. Botão `"Entrar"` (`"Entrando..."` enquanto envia).
+4a. `<details>` `"Esqueci minha senha"` → `"Peça ao seu gestor ou ao suporte do MyLog para redefinir sua senha. Se você entrou com Google, use \"Entrar com Google\"."` (não há envio de e-mail de recuperação).
 5. O erro aparece numa caixa vermelha. Com convite, o form envia `inviteToken`.
 
 **`RegisterForm`** (`components/register-form.tsx`, prop opcional `inviteToken`): link `"Cadastrar com Google"`, divisor `"ou"` e os campos:
 - `"Nome completo"` (`"Seu nome"`);
 - `"E-mail"`;
-- `"Senha"` (`"Mínimo 6 caracteres"`);
+- `"Senha"` (`"Mínimo 6 caracteres"`, `PasswordInput`);
 - `"Confirmar senha"` (`"Repita a senha"`).
 
 Botão `"Criar conta"` (`"Criando conta..."`).
@@ -922,7 +923,7 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
 - Admin: lixeira (title `"Excluir entrada de auditoria (ADMIN MASTER) — fica registrado quem excluiu"`) → confirmação `"Excluir esta entrada de auditoria?"` / `"A exclusão também fica registrada, com você como autor. Essa ação não pode ser desfeita."`. O item some quando o servidor confirma.
 - `getAuditLog` e `getAuditLogGlobal` trazem também `snapshotBefore` e `snapshotAfter`.
 
-**`ConfirmButton`** (`components/confirm-dialog.tsx`): botão + modal de confirmação genérico (título, descrição, `confirmLabel`/`pendingLabel`, padrão `"Excluir"`/`"Excluindo..."`; foco inicial em `"Cancelar"`). Se a action devolver `{ error }`, o erro aparece no modal e ele não fecha; se lançar, `"Não foi possível concluir. Atualize a página e tente de novo."`. O `ConfirmDeleteButton` usa ele.
+**`ConfirmDialog`** (controlado, aberto por quem chama, ex.: um menu) e **`ConfirmButton`** (botão que abre o `ConfirmDialog`) (`components/confirm-dialog.tsx`): modal de confirmação genérico (título, descrição, `confirmLabel`/`pendingLabel`, padrão `"Excluir"`/`"Excluindo..."`; foco inicial em `"Cancelar"`). Se a action devolver `{ error }`, o erro aparece no modal e ele não fecha; se lançar, `"Não foi possível concluir. Atualize a página e tente de novo."`. O `ConfirmDeleteButton` usa ele.
 
 ### 11.10 Convite — `/convite/[token]`
 
@@ -931,7 +932,7 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
   - `expired` → `"Este convite expirou. Peça ao seu gestor para gerar um novo link."`;
   - `revoked` → `"Este convite foi revogado."`;
   - `accepted` → `"Este convite já foi utilizado."`.
-- **Logado** → `"Convite para {org}"`, o texto `"Aceitar vincula sua conta a esta organização como entregador."` e o botão `"Aceitar convite"` (`"Aceitando..."`), de `components/accept-invite-button.tsx`; o erro aparece embaixo, em vermelho. O aceite **nunca** é automático num GET.
+- **Logado** → `"Convite para {org}"`, o texto `"Aceitar vincula sua conta a esta organização como entregador."`, a caixa `"Você está entrando como {e-mail}."`, o botão `"Aceitar convite"` (`"Aceitando..."`, `components/accept-invite-button.tsx`; o erro aparece embaixo, em vermelho) e o link `"Não é você? Trocar conta"` (form → `logout` com `next=/convite/{token}`: sai e volta ao convite). O aceite **nunca** é automático num GET.
 - **Deslogado** → logo `"MYLOG"`, `"Convite para {org}"` e `"Crie sua conta ou entre para aceitar."`.
   - Com e-mail restrito: `"Este convite é exclusivo para {email}."`.
   - Abas `"Criar conta"` (padrão, `RegisterForm`) e `"Já tenho conta"` (`LoginForm`), as duas com o token.
@@ -946,12 +947,12 @@ Usa as boletas e os lançamentos **do período da página**; os pacotes, todos.
 - Botão `"Criar organização"` (`"Criando..."`).
 
 **`UsersPanel`** (`components/users-panel.tsx`): título `"Usuários cadastrados ({n})"`. Vazio → `"Nenhum usuário cadastrado"`.
-- Colunas: `"Nome"`, `"E-mail"`, `"Login"` (badge `"Google"` ou `"Senha"`), `"Criado em"` e `"Ações"`.
-- Ações por linha:
-  - escudo → `/gestor/entregadores/{id}?from=gestao` (modo ADMIN MASTER; `next/link` com `buttonVariants`, `aria-label "Editar dados de {nome} como ADMIN MASTER"`);
-  - lápis → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."`: campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, fecha e mostra o toast `"Dados atualizados!"`;
-  - chave → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, fecha e mostra o toast `"Senha redefinida!"`;
-  - lixeira (desabilitada para o próprio admin) → modal `"Excluir {nome}?"` / `"Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."`, botão `"Excluir permanentemente"` (`"Excluindo..."`); o erro aparece no modal.
+- Abaixo do `sm`: um cartão por usuário (nome, e-mail, badge `"Google"`/`"Senha"` + `"desde {data}"`) com o menu de ações. Do `sm` para cima: tabela `"Nome"`, `"E-mail"`, `"Login"`, `"Criado em"`, `"Ações"`.
+- **Menu de ações ⋯** (`aria-label "Ações de {nome}"`), o mesmo nos dois formatos:
+  - `"Abrir como ADMIN MASTER"` → `/gestor/entregadores/{id}?from=gestao`;
+  - `"Editar nome e e-mail"` → modal `"Editar usuário"` / `"Altere nome e e-mail de {nome}."` (`sm:max-w-md`): campos `"Nome"` e `"E-mail"`, botão `"Salvar alterações"`, fecha e mostra o toast `"Dados atualizados!"`;
+  - `"Redefinir senha"` → modal `"Redefinir senha"` / `"Defina uma nova senha para {nome}. A senha atual não é necessária."`: campos `"Nova senha"` e `"Confirmar nova senha"`, botão `"Redefinir senha"`, fecha e mostra o toast `"Senha redefinida!"`;
+  - `"Excluir usuário"` (vermelho; para o próprio admin vira `"Excluir (é você)"`, desabilitado) → `ConfirmDialog` `"Excluir {nome}?"` / `"Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."`, botões `"Cancelar"` (foco) e `"Excluir permanentemente"` (`"Excluindo..."`); o erro da action aparece no modal; sucesso → toast `"{nome} excluído"`.
 
 ---
 
@@ -1045,11 +1046,12 @@ Base: `* { border-border outline-ring/50 }` e `body { bg-background text-foregro
 
 ---
 
-## 13. Testes (`npm test` → Vitest; estado atual: **138/138**; o CI roda em todo push e PR, §2.1)
+## 13. Testes (`npm test` → Vitest; estado atual: **141/141**; o CI roda em todo push e PR, §2.1)
 
 | Arquivo | O que DEVE ser testado |
 |---|---|
 | `lib/auth.test.ts` | senha certa passa; senha errada falha; mesma senha gera hashes diferentes; formato legado HMAC é aceito; formato desconhecido falha; `isLegacyHash` com 2 e 3 partes; `isAdminEmail` ignora maiúsculas e devolve false sem `ADMIN_EMAIL` |
+| `lib/auth-redirect.test.ts` | `safeLogoutRedirect`: vazio → `/`; aceita `/convite/{token}`; recusa URL externa, `//host`, `..`, query, outra rota e `/convite/` vazio |
 | `lib/gestor-helpers.test.ts` | `auditItemLabel` (boleta pela data, pacote pelo código, lançamento pela descrição, usuário, entrada de auditoria, sem foto → `#id`); `formatAuditValue` (R$, status, tipo, data, vazio); `formatDateTime`; `memberStats` (por painel, sem somar; última boleta; sem boleta fora do mapa); `panelSummaries` (painéis padrão mesmo sem dado) |
 | `lib/ui-helpers.test.ts` | `sanitizeDecimalInput` (vírgula, ponto e vírgula juntos = milhar + decimal, um tipo só, 2 casas, lixo, vazio) e `decimalValue`; `periodOptions` (ordem dos anos e meses, várias listas) e `periodLabel`; `lastValuePerDelivery` (mais recente; sem boletas → 3.50); `filterByDelivered`; `filterPackages` (código, destinatário, cidade, sem acento, status); `formatCurrencyCompact` (valores distintos, curtos) |
 | `lib/format.test.ts` | `formatCurrency` (número, string, inválido → R$ 0,00); `formatDate` (pt-BR, null e inválida → `"—"`); `filterByPeriod` (tudo, por ano, ano + mês com mês 0-indexado); `statusLabel` (conhecido e desconhecido) |

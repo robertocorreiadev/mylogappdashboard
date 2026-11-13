@@ -393,9 +393,8 @@ espremido no fim desta revisão.
       (`ConfirmDeleteButton`, foco em "Cancelar"). Testado na boleta e no
       financeiro clicando só em Cancelar (nada excluído); rastreio sem
       entregas cadastradas — mesmo componente, não visto na tela.
-- [ ] Débito: a exclusão de usuário (`users-panel.tsx`) tem o próprio modal de
-      confirmação; unificar com `ConfirmDeleteButton` (aceitar descrição e
-      `{ error }` da action) quando mexer nessa tela.
+- [x] Débito fechado em 2026-11-13 (Fase 5): a exclusão de usuário usa o
+      `ConfirmDialog` comum.
 
 ## D8, D10 e D15 da spec (2026-11-09, fechado em 2026-11-13)
 - [x] D8: exclusão de usuário em cascata (`lib/db/delete-user.ts`, regra pura
@@ -525,6 +524,30 @@ Plano: `C:\Users\IOT DEXTER\.claude\plans\desenvolver-melhorias-de-layouts-cheer
       produção; não há pendentes) e excluir entrada de auditoria.
 - [ ] Ideia: convites como seção recolhível (ficou como card abaixo dos
       entregadores).
+
+## Redesign de layout — Fase 5: admin e primeiro acesso (2026-11-13)
+- [x] `/gestao`: cartões no celular, tabela do `sm` para cima, menu ⋯ com
+      rótulos ("Abrir como ADMIN MASTER", "Editar nome e e-mail", "Redefinir
+      senha", "Excluir usuário"; desabilitado para o próprio admin).
+      Exclusão pelo `ConfirmDialog` (com Cancelar e foco nele) — fecha o
+      débito do modal próprio de exclusão de usuário.
+- [x] Login e cadastro: botão de mostrar senha (`PasswordInput`),
+      "Esqueci minha senha" (orienta a falar com o gestor ou suporte; sem
+      e-mail de recuperação), cartão com 24 px de espaço no celular.
+- [x] Convite com sessão: "Você está entrando como {e-mail}" + "Não é você?
+      Trocar conta" (sai e volta ao convite). `logout(formData?)` só aceita
+      `/convite/{token}` como destino (`lib/auth-redirect.ts` + teste).
+- [x] Testes: `lib/auth-redirect.test.ts` (3). Total 141/141.
+- [x] Smoke test: menu ⋯ do `/gestao` (itens e "Excluir (é você)"
+      desabilitado), modal de exclusão aberto e cancelado com as server
+      actions bloqueadas (0 chamadas, Walter continua na lista); login sem
+      sessão (Chrome isolado): olho troca `password`→`text`, "Esqueci minha
+      senha", 24 px de espaço em tela estreita.
+- [ ] Não testado no navegador: convite com sessão ("Trocar conta") — exige
+      um convite válido (criar grava no banco de produção). Coberto pelo
+      teste do destino seguro e pelo tsc.
+- [ ] Ideia futura: recuperação de senha por e-mail (precisa de serviço de
+      e-mail).
 
 ## Base de teste de pior caso (decisão do usuário, 2026-11-09)
 - [ ] Criar um usuário/organização de teste "estressado" no banco de dev

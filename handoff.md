@@ -63,7 +63,10 @@ as fases e revisar no final"): commits locais, push só depois da revisão
 final do usuário.**
 
 **Fase 4 (gestor, D6) — commit local (2026-11-13).** 138/138. Detalhe no
-`TODO.md`. **Próximo:** Fase 5 (admin e primeiro acesso).
+`TODO.md`.
+
+**Fase 5 (admin e primeiro acesso) — commit local (2026-11-13).** 141/141.
+**Próximo:** Fase 6 (fechamento) e revisão final com o usuário; depois push.
 
 **⏭️ Próxima sessão — começar por aqui:** testar o **login com Google em
 produção** (D1 corrigido em 2026-11-09: só liga/cria conta com e-mail

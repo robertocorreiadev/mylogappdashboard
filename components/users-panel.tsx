@@ -1,11 +1,15 @@
 "use client"
 
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useState, useTransition } from "react"
-import { Pencil, KeyRound, Trash2, Users, ShieldAlert } from "lucide-react"
+import { Pencil, KeyRound, Trash2, Users, ShieldAlert, MoreHorizontal } from "lucide-react"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { updateUserAdmin, setUserPasswordAdmin, deleteUserAdmin } from "@/app/actions/admin-users"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -101,63 +105,40 @@ function ResetPasswordForm({ userId, onClose }: { userId: number; onClose: () =>
   )
 }
 
-function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
-  const [editOpen, setEditOpen]     = useState(false)
-  const [passOpen, setPassOpen]     = useState(false)
+// Menu ⋯ de ações de um usuário (mesmo menu na tabela e nos cartões do celular).
+function UserActions({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
+  const router = useRouter()
+  const [editOpen, setEditOpen] = useState(false)
+  const [passOpen, setPassOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const [deleteErr, setDeleteErr]   = useState<string | null>(null)
-
-  function handleDelete() {
-    setDeleteErr(null)
-    const fd = new FormData()
-    fd.append("id", String(user.id))
-    startTransition(async () => {
-      const res = await deleteUserAdmin(fd)
-      if (res?.error) setDeleteErr(res.error)
-      else            { setDeleteOpen(false); toast.success(`${user.name} excluído`) }
-    })
-  }
 
   return (
     <>
-      <TableRow>
-        <TableCell className="font-medium">{user.name}</TableCell>
-        <TableCell className="text-muted-foreground">{user.email}</TableCell>
-        <TableCell>
-          <Badge variant={user.googleId ? "secondary" : "outline"}>
-            {user.googleId ? "Google" : "Senha"}
-          </Badge>
-        </TableCell>
-        <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(user.createdAt)}</TableCell>
-        <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-1">
-            <Link
-              href={`/gestor/entregadores/${user.id}?from=gestao`}
-              className={buttonVariants({ variant: "ghost", size: "icon", className: "h-8 w-8 text-muted-foreground hover:text-destructive" })}
-              aria-label={`Editar dados de ${user.name} como ADMIN MASTER`}
-              title="Editar dados operacionais como ADMIN MASTER"
-            >
-              <ShieldAlert className="h-4 w-4" />
-            </Link>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)} aria-label="Editar">
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary"
-              onClick={() => setPassOpen(true)} aria-label="Redefinir senha">
-              <KeyRound className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              disabled={isSelf} onClick={() => setDeleteOpen(true)} aria-label="Excluir">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label={`Ações de ${user.name}`} />}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => router.push(`/gestor/entregadores/${user.id}?from=gestao`)}>
+            <ShieldAlert className="text-destructive" /> Abrir como ADMIN MASTER
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Pencil /> Editar nome e e-mail
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setPassOpen(true)}>
+            <KeyRound /> Redefinir senha
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" disabled={isSelf} onClick={() => setDeleteOpen(true)}>
+            <Trash2 /> {isSelf ? "Excluir (é você)" : "Excluir usuário"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar usuário</DialogTitle>
             <DialogDescription>Altere nome e e-mail de {user.name}.</DialogDescription>
@@ -167,7 +148,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       </Dialog>
 
       <Dialog open={passOpen} onOpenChange={setPassOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Redefinir senha</DialogTitle>
             <DialogDescription>Defina uma nova senha para {user.name}. A senha atual não é necessária.</DialogDescription>
@@ -176,26 +157,25 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir {user.name}?</DialogTitle>
-            <DialogDescription>
-              Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          {deleteErr && (
-            <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{deleteErr}</p>
-          )}
-          <DialogFooter>
-            <Button variant="destructive" disabled={isPending} onClick={handleDelete}>
-              {isPending ? "Excluindo..." : "Excluir permanentemente"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Excluir ${user.name}?`}
+        description="Isso também apagará permanentemente as boletas, entregas, lançamentos, vínculos e a auditoria desse usuário, e a organização individual dele, se houver. Dono de organização com outros membros não pode ser excluído. Essa ação não pode ser desfeita."
+        confirmLabel="Excluir permanentemente"
+        onConfirm={() => {
+          const fd = new FormData()
+          fd.append("id", String(user.id))
+          return deleteUserAdmin(fd)
+        }}
+        onDone={() => toast.success(`${user.name} excluído`)}
+      />
     </>
   )
+}
+
+function LoginBadge({ user }: { user: AdminUser }) {
+  return <Badge variant={user.googleId ? "secondary" : "outline"}>{user.googleId ? "Google" : "Senha"}</Badge>
 }
 
 export function UsersPanel({ users, currentUserId }: { users: AdminUser[]; currentUserId: number }) {
@@ -208,26 +188,53 @@ export function UsersPanel({ users, currentUserId }: { users: AdminUser[]; curre
 
         {users.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <Users className="h-8 w-8 text-muted-foreground" />
+            <Users className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="text-sm font-medium text-foreground">Nenhum usuário cadastrado</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Login</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map(u => <UserRow key={u.id} user={u} isSelf={u.id === currentUserId} />)}
-              </TableBody>
-            </Table>
-          </div>
+          <>
+            {/* Celular: cartões */}
+            <ul className="flex flex-col gap-2 sm:hidden">
+              {users.map((u) => (
+                <li key={u.id} className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">{u.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{u.email}</p>
+                    <p className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      <LoginBadge user={u} /> desde {formatDate(u.createdAt)}
+                    </p>
+                  </div>
+                  <UserActions user={u} isSelf={u.id === currentUserId} />
+                </li>
+              ))}
+            </ul>
+
+            {/* sm+: tabela */}
+            <div className="hidden overflow-x-auto sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Login</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                      <TableCell><LoginBadge user={u} /></TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(u.createdAt)}</TableCell>
+                      <TableCell className="text-right"><UserActions user={u} isSelf={u.id === currentUserId} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

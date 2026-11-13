@@ -27,8 +27,8 @@ export default async function LoginPage({
   const errorMsg = typeof code === "string" ? LOGIN_ERRORS[code] : undefined
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-5">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center p-4 sm:p-5">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl sm:p-10">
         <div className="mb-8 flex items-center justify-center gap-3 text-3xl font-bold text-primary">
           <Package className="h-8 w-8" aria-hidden="true" />
           <span>MYLOG</span>

@@ -1,5 +1,6 @@
 "use client"
 
+import { PasswordInput } from "@/components/password-input"
 import { useState, useTransition } from "react"
 import { UserPlus } from "lucide-react"
 import { register } from "@/app/actions/auth"
@@ -52,11 +53,11 @@ export function RegisterForm({ inviteToken }: { inviteToken?: string } = {}) {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="password">Senha</Label>
-          <Input id="password" name="password" type="password" required placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+          <PasswordInput id="password" name="password" required placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="confirm">Confirmar senha</Label>
-          <Input id="confirm" name="confirm" type="password" required placeholder="Repita a senha" autoComplete="new-password" />
+          <PasswordInput id="confirm" name="confirm" required placeholder="Repita a senha" autoComplete="new-password" />
         </div>
         {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{error}</p>}
         <Button type="submit" disabled={pending} className="mt-1 gap-2">

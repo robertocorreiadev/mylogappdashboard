@@ -9,16 +9,7 @@ import { FormError } from "@/components/form-error"
 
 type ButtonProps = React.ComponentProps<typeof Button>
 
-/**
- * Botão que pede confirmação num modal antes de uma ação que não volta
- * (excluir, revogar). Não usa `window.confirm` (trava a página e não segue o
- * tema). Se a action devolver `{ error }` ou lançar, o erro aparece no modal
- * e ele não fecha. Foco inicial em "Cancelar".
- */
-export function ConfirmButton({
-  title, description = "Essa ação não pode ser desfeita.", confirmLabel = "Excluir", pendingLabel = "Excluindo...",
-  onConfirm, onDone, buttonProps, children,
-}: {
+type ConfirmProps = {
   title: string
   description?: string
   confirmLabel?: string
@@ -26,10 +17,18 @@ export function ConfirmButton({
   onConfirm: () => Promise<unknown> | unknown
   /** Depois do sucesso (ex.: toast). */
   onDone?: () => void
-  buttonProps?: ButtonProps
-  children: React.ReactNode
-}) {
-  const [open, setOpen] = useState(false)
+}
+
+/**
+ * Modal de confirmação para ações que não voltam (excluir, revogar). Não usa
+ * `window.confirm` (trava a página e não segue o tema). Se a action devolver
+ * `{ error }` ou lançar, o erro aparece no modal e ele não fecha. Foco
+ * inicial em "Cancelar". Controlado: quem abre é o chamador (ex.: um menu).
+ */
+export function ConfirmDialog({
+  open, onOpenChange, title, description = "Essa ação não pode ser desfeita.",
+  confirmLabel = "Excluir", pendingLabel = "Excluindo...", onConfirm, onDone,
+}: ConfirmProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -43,7 +42,7 @@ export function ConfirmButton({
           setError(res.error)
           return
         }
-        setOpen(false)
+        onOpenChange(false)
         onDone?.()
       } catch {
         setError("Não foi possível concluir. Atualize a página e tente de novo.")
@@ -52,29 +51,35 @@ export function ConfirmButton({
   }
 
   return (
+    <Dialog open={open} onOpenChange={(o) => { if (!pending) { setError(null); onOpenChange(o) } }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <FormError message={error} />
+        <DialogFooter>
+          <Button variant="outline" disabled={pending} onClick={() => onOpenChange(false)} autoFocus>Cancelar</Button>
+          <Button variant="destructive" disabled={pending} onClick={handleConfirm}>
+            {pending ? pendingLabel : confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Botão que abre o ConfirmDialog. */
+export function ConfirmButton({
+  buttonProps, children, ...confirm
+}: ConfirmProps & { buttonProps?: ButtonProps; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
     <>
-      <Button
-        {...buttonProps}
-        disabled={pending || buttonProps?.disabled}
-        onClick={() => { setError(null); setOpen(true) }}
-      >
+      <Button {...buttonProps} onClick={() => setOpen(true)}>
         {children}
       </Button>
-      <Dialog open={open} onOpenChange={(o) => { if (!pending) setOpen(o) }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <FormError message={error} />
-          <DialogFooter>
-            <Button variant="outline" disabled={pending} onClick={() => setOpen(false)} autoFocus>Cancelar</Button>
-            <Button variant="destructive" disabled={pending} onClick={handleConfirm}>
-              {pending ? pendingLabel : confirmLabel}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog {...confirm} open={open} onOpenChange={setOpen} />
     </>
   )
 }

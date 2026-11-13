@@ -1,5 +1,6 @@
 "use client"
 
+import { PasswordInput } from "@/components/password-input"
 import { useState, useTransition } from "react"
 import { LogIn } from "lucide-react"
 import { login } from "@/app/actions/auth"
@@ -48,7 +49,7 @@ export function LoginForm({ inviteToken }: { inviteToken?: string } = {}) {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="password">Senha</Label>
-          <Input id="password" name="password" type="password" required placeholder="••••••" autoComplete="current-password" />
+          <PasswordInput id="password" name="password" required placeholder="••••••" autoComplete="current-password" />
         </div>
         {error && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">{error}</p>}
         <Button type="submit" disabled={pending} className="mt-1 gap-2">
@@ -56,6 +57,14 @@ export function LoginForm({ inviteToken }: { inviteToken?: string } = {}) {
           {pending ? "Entrando..." : "Entrar"}
         </Button>
       </form>
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer select-none rounded text-center font-medium text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50">
+          Esqueci minha senha
+        </summary>
+        <p className="mt-2 rounded-md bg-secondary p-3 leading-relaxed">
+          Peça ao seu gestor ou ao suporte do MyLog para redefinir sua senha. Se você entrou com Google, use &quot;Entrar com Google&quot;.
+        </p>
+      </details>
     </div>
   )
 }

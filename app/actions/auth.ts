@@ -1,5 +1,6 @@
 "use server"
 
+import { safeLogoutRedirect } from "@/lib/auth-redirect"
 import { redirect } from "next/navigation"
 import { and, eq } from "drizzle-orm"
 import { db } from "@/lib/db"
@@ -157,9 +158,11 @@ export async function register(formData: FormData) {
 // loginWithGoogle fica em lib/google-auth.ts: confia no perfil recebido,
 // então NÃO pode ser uma Server Action deste arquivo "use server" (D1).
 
-export async function logout() {
+// `formData.next` (opcional): só a página de um convite (safeLogoutRedirect).
+// Chamado sem argumento (menu de conta) ou como action de form.
+export async function logout(formData?: FormData) {
   await clearUserId()
-  redirect("/")
+  redirect(safeLogoutRedirect(formData?.get("next")?.toString()))
 }
 
 // ── Alterar dados do perfil ───────────────────────────────────

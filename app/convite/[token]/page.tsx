@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Package, Database } from "lucide-react"
 import { getUserId } from "@/lib/session"
+import { logout, requireUser } from "@/app/actions/auth"
 import { getInviteByToken } from "@/lib/invites"
 import { LoginForm } from "@/components/login-form"
 import { RegisterForm } from "@/components/register-form"
@@ -16,8 +17,8 @@ const REASON_MESSAGES: Record<string, string> = {
 
 function InviteError({ message }: { message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center p-5">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 text-center shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center p-4 sm:p-5">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center shadow-2xl sm:p-10">
         <Package className="mx-auto mb-4 h-8 w-8 text-muted-foreground" aria-hidden="true" />
         <h1 className="mb-2 text-lg font-bold text-foreground">Convite indisponível</h1>
         <p className="text-sm text-muted-foreground">{message}</p>
@@ -39,23 +40,36 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
 
   const userId = await getUserId()
   if (userId) {
+    // Mostra com qual conta o convite será aceito e deixa trocar (sai e volta aqui).
+    const viewer = await requireUser().catch(() => null)
     return (
-      <main className="flex min-h-screen items-center justify-center p-5">
-        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 text-center shadow-2xl">
+      <main className="flex min-h-screen items-center justify-center p-4 sm:p-5">
+        <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 text-center shadow-2xl sm:p-10">
           <Package className="mx-auto mb-4 h-8 w-8 text-primary" aria-hidden="true" />
           <h1 className="mb-2 text-lg font-bold text-foreground">Convite para {status.orgName}</h1>
           <p className="mb-6 text-sm text-muted-foreground">
             Aceitar vincula sua conta a esta organização como entregador.
           </p>
+          {viewer && (
+            <p className="mb-4 rounded-md bg-secondary px-3 py-2 text-xs text-muted-foreground">
+              Você está entrando como <strong className="text-foreground">{viewer.email}</strong>.
+            </p>
+          )}
           <AcceptInviteButton token={token} />
+          <form action={logout} className="mt-4">
+            <input type="hidden" name="next" value={`/convite/${token}`} />
+            <button type="submit" className="text-xs font-medium text-primary hover:underline">
+              Não é você? Trocar conta
+            </button>
+          </form>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-5">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-10 shadow-2xl">
+    <main className="flex min-h-screen items-center justify-center p-4 sm:p-5">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl sm:p-10">
         <div className="mb-4 flex items-center justify-center gap-3 text-3xl font-bold text-primary">
           <Package className="h-8 w-8" aria-hidden="true" />
           <span>MYLOG</span>
